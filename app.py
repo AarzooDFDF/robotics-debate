@@ -20,7 +20,7 @@ PROVIDERS = {
         "models": ["llama3.1", "llama3.3", "mistral", "gemma3"],
         "key_env": None,
         "requires_key": False,
-        "note": "Runs 100% locally. Install at [ollama.com](https://ollama.com), then run `ollama pull llama3.3` once.",
+        "note": "Runs 100% locally. Install at [ollama.com](https://ollama.com), then run `ollama pull llama3.1` once.",
     },
     "Anthropic (Claude)": {
         "base_url": "https://api.anthropic.com/v1",
@@ -78,18 +78,21 @@ def load_debates() -> dict:
     }
 
 
-personas = load_personas()
-debates = load_debates()
-
 # ── Session state ─────────────────────────────────────────────────────────────
 for key, default in [
     ("debate_history", []),
     ("debate_complete", False),
     ("debate_topic", ""),
     ("debate_experts", []),
+    ("custom_personas", {}),
+    ("custom_debates", {}),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
+
+# Merge loaded + custom
+personas = {**load_personas(), **st.session_state.custom_personas}
+debates = {**load_debates(), **st.session_state.custom_debates}
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -106,16 +109,41 @@ with st.sidebar:
             type="password",
         )
     else:
-        api_key = "ollama"  # Ollama accepts any non-empty string
+        api_key = "ollama"
 
     st.divider()
 
+    # ── Debate topic picker + custom topic form ───────────────────────────────
     selected_topic = st.selectbox("Debate Topic", options=list(debates.keys()))
     if selected_topic:
         st.caption(debates[selected_topic]["description"])
 
+    with st.expander("➕ Suggest a debate topic"):
+        with st.form("custom_topic_form", clear_on_submit=True):
+            ct_name = st.text_input("Topic title", placeholder="e.g. Will dextrous hands commoditise?")
+            ct_desc = st.text_area("Description (1-2 sentences)", placeholder="What is this debate about?", height=80)
+            ct_question = st.text_area("Opening question", placeholder="The specific question you want the experts to debate.", height=100)
+            ct_followup = st.text_area(
+                "Follow-up question (optional)",
+                placeholder="A harder follow-up to push the debate further.",
+                height=80,
+            )
+            if st.form_submit_button("Add topic"):
+                if ct_name and ct_question:
+                    st.session_state.custom_debates[ct_name] = {
+                        "topic": ct_name,
+                        "description": ct_desc or ct_name,
+                        "opening_question": ct_question,
+                        "follow_up_prompts": [ct_followup] if ct_followup else [],
+                    }
+                    st.success(f"Added: {ct_name}")
+                    st.rerun()
+                else:
+                    st.warning("Title and opening question are required.")
+
     st.divider()
 
+    # ── Expert picker + custom expert form ────────────────────────────────────
     selected_names = st.multiselect(
         "Select Experts (2–6)",
         options=list(personas.keys()),
@@ -123,8 +151,72 @@ with st.sidebar:
         max_selections=6,
     )
 
-    num_rounds = st.slider("Rounds", min_value=1, max_value=3, value=2)
+    with st.expander("➕ Suggest an expert"):
+        with st.form("custom_expert_form", clear_on_submit=True):
+            ce_name = st.text_input("Full name", placeholder="e.g. Marc Raibert")
+            ce_title = st.text_input("Title", placeholder="e.g. Founder & Executive Chairman")
+            ce_affil = st.text_input("Affiliation", placeholder="e.g. Boston Dynamics")
+            ce_thesis = st.text_area(
+                "Core thesis",
+                placeholder="Their main argument in 2-3 sentences.",
+                height=100,
+            )
+            ce_positions = st.text_area(
+                "Known positions (one per line)",
+                placeholder="- Believes legged robots will outperform wheeled ones\n- Argues dynamic balance is the key unlock",
+                height=120,
+            )
+            ce_skeptical = st.text_area(
+                "Sceptical of (one per line)",
+                placeholder="- Humanoid form factor as near-term commercial winner",
+                height=80,
+            )
+            ce_style = st.text_input(
+                "Rhetorical style",
+                placeholder="e.g. Pragmatic engineer, demo-first, dismissive of hype",
+            )
+            ce_url1_title = st.text_input("Article 1 title (optional)", placeholder="e.g. Boston Dynamics Blog")
+            ce_url1 = st.text_input("Article 1 URL (optional)", placeholder="https://...")
+            ce_url2_title = st.text_input("Article 2 title (optional)")
+            ce_url2 = st.text_input("Article 2 URL (optional)", placeholder="https://...")
 
+            if st.form_submit_button("Add expert"):
+                if ce_name and ce_thesis:
+                    articles = []
+                    if ce_url1_title and ce_url1:
+                        articles.append({"title": ce_url1_title, "url": ce_url1})
+                    if ce_url2_title and ce_url2:
+                        articles.append({"title": ce_url2_title, "url": ce_url2})
+
+                    positions = [
+                        p.lstrip("- ").strip()
+                        for p in ce_positions.strip().splitlines()
+                        if p.strip()
+                    ]
+                    skeptical = [
+                        s.lstrip("- ").strip()
+                        for s in ce_skeptical.strip().splitlines()
+                        if s.strip()
+                    ]
+
+                    st.session_state.custom_personas[ce_name] = {
+                        "name": ce_name,
+                        "title": ce_title or "Expert",
+                        "affiliation": ce_affil or "Independent",
+                        "core_thesis": ce_thesis,
+                        "known_positions": positions,
+                        "skeptical_of": skeptical,
+                        "rhetorical_style": ce_style or "Direct and opinionated.",
+                        "seminal_articles": articles,
+                    }
+                    st.success(f"Added: {ce_name}")
+                    st.rerun()
+                else:
+                    st.warning("Name and core thesis are required.")
+
+    st.divider()
+
+    num_rounds = st.slider("Rounds", min_value=1, max_value=3, value=2)
     model_choice = st.selectbox("Model", options=provider["models"])
 
     st.divider()
@@ -157,9 +249,11 @@ if not st.session_state.debate_complete and not run_btn and selected_names:
                 st.markdown(f"**{name}**")
                 st.caption(f"{p['title']} · {p['affiliation']}")
                 st.markdown(f"_{p['core_thesis'][:120].rstrip()}…_")
-                with st.expander("Seminal articles"):
-                    for a in p.get("seminal_articles", []):
-                        st.markdown(f"[{a['title']}]({a['url']})")
+                articles = p.get("seminal_articles", [])
+                if articles:
+                    with st.expander("Seminal articles"):
+                        for a in articles:
+                            st.markdown(f"[{a['title']}]({a['url']})")
 
 # ── Run debate ────────────────────────────────────────────────────────────────
 def make_client(api_key: str, base_url: str) -> OpenAI:
