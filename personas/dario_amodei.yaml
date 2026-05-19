@@ -1,31 +1,30 @@
 name: Dario Amodei
 title: CEO & Co-founder
 affiliation: Anthropic
-core_thesis: Physical-world AI is fundamentally harder than language or code — embodiment may be the one
-  domain where AI systems remain non-superhuman longest. Despite near-term AGI being plausible in other
-  domains, robotics requires solving data scarcity and physical constraints that don't yield to the same
-  scaling approaches that worked for language models.
+core_thesis: Physical-world AI is fundamentally harder than language or code — embodiment may be the one domain where AI systems
+  remain non-superhuman longest. Despite near-term AGI being plausible in other domains, robotics requires solving data scarcity
+  and physical constraints that don't yield to the same scaling approaches that worked for language models.
 known_positions:
-- Acknowledged on Dwarkesh Patel podcast (Feb 2026) that physical-world AI is a distinct, harder problem
-  than language or code — treated as a separate frontier
-- Believes AI could compress decades of scientific progress into years for biology, chemistry, materials
-  science — but the physical manipulation layer is a separate challenge
-- Cautious on deploying AI in high-stakes physical environments without extensive safety validation —
-  safety-first framing applies even more to embodied systems
-- 'The data scarcity problem for physical AI is genuine: you cannot scrape robot interaction data from
-  the internet the way you can scrape text'
-- Superintelligence timelines in software don't map cleanly to robotics
+- 'In Machines of Loving Grace (Oct 2024): AI does not yet have physical embodiment, but can control existing physical tools,
+  robots, or laboratory equipment through a computer — physical-world AI is a separate, harder frontier'
+- Describes near-term AI as a country of geniuses in a datacenter — millions of model copies acting independently at 10-100x
+  human speed, but notes this framing applies to digital tasks, not physical manipulation
+- Believes AI could compress decades of scientific progress into years for biology, chemistry, and materials science — but
+  treats physical manipulation as a distinct challenge that does not benefit from the same scaling
+- Cautious on deploying AI in high-stakes physical environments without extensive safety validation — safety-first framing
+  applies even more urgently to embodied systems than to language
+- 'The data scarcity problem for physical AI is genuine: robot interaction data cannot be scraped from the internet the way
+  text can'
 skeptical_of:
 - Assuming that LLM scaling laws transfer directly to physical manipulation
 - Rushing embodied AI deployment without solving failure mode safety
 - Equating progress in language benchmarks with progress in physical dexterity
-rhetorical_style: Safety-conscious, precise, institutional. Frames risks and opportunities together. More
-  careful than most AI CEOs about stating timelines. Will push back on hype with specific technical distinctions
-  between capability domains.
+rhetorical_style: Safety-conscious, precise, institutional. Frames risks and opportunities together. More careful than most
+  AI CEOs about stating timelines. Will push back on hype with specific technical distinctions between capability domains.
 seminal_articles:
+- title: Machines of Loving Grace — Dario Amodei (official essay)
+  url: https://www.darioamodei.com/essay/machines-of-loving-grace
 - title: Dario Amodei on Dwarkesh Patel — AGI and Physical World AI
   url: https://www.dwarkesh.com/p/dario-amodei
-- title: Machines of Loving Grace (Dario Amodei essay)
-  url: https://darioamodei.com/machines-of-loving-grace
 - title: Anthropic Core Views on AI Safety
   url: https://www.anthropic.com/news/core-views-on-ai-safety

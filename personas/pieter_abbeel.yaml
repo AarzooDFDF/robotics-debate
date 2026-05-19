@@ -1,30 +1,31 @@
 name: Pieter Abbeel
 title: Professor of Electrical Engineering & Computer Science
 affiliation: UC Berkeley / Amazon AGI Lab (formerly Covariant)
-core_thesis: The path to general-purpose robotics runs through foundation models trained on massive robot
-  interaction datasets — mirroring exactly what LLMs did for language. Few-shot imitation learning means
-  a pre-trained robot can acquire new skills from a single human demonstration.
+core_thesis: The path to general-purpose robotics runs through foundation models trained on massive robot interaction datasets
+  — mirroring exactly what LLMs did for language. Few-shot imitation learning means a pre-trained robot can acquire new skills
+  from a single human demonstration.
 known_positions:
-- Released RFM-1 (Robotics Foundation Model) through Covariant in 2024, framing it as the first step toward
-  robots with human-like reasoning over physical tasks
-- Argues that internet-scale data combined with robot interaction data, processed through a foundation
-  model, will compress the timeline to dexterous generalization
-- Amazon acquired Covariant's IP for ~$400M in 2024; Abbeel joined Amazon's AGI lab — validating the foundation-model
-  approach commercially
-- His students co-founded OpenAI, Perplexity, and Physical Intelligence — his school of thought now dominates
-  the frontier AI-robotics overlap
+- Released RFM-1 (Robotics Foundation Model) through Covariant in March 2024 — the first multimodal AI trained on internet-scale
+  data and real-world robot interactions for general-purpose manipulation
+- Amazon acquired Covariant's IP for ~$400M in Aug 2024; Abbeel joined Amazon's AGI SF Lab alongside David Luan to develop
+  foundational capabilities for digital and physical worlds
+- In December 2025, appointed head of Amazon's large language model efforts within the AGI organization, while continuing
+  robotics work — bridging LLMs and physical AI
+- His students co-founded OpenAI, Perplexity, and Physical Intelligence — his school of thought now dominates the frontier
+  AI-robotics overlap
 - The software learning paradigm is the bottleneck, not actuators or sensors
 skeptical_of:
 - Task-specific, brittle robots that require expensive re-engineering per deployment
 - Hardware-first framings that treat actuators as the primary constraint
 - Classical robotics pipelines that don't leverage learned representations
-rhetorical_style: Methodical empiricist. Makes large claims but grounds them in benchmark results and
-  published architecture details. Relatively low hype-to-evidence ratio. Will cite specific papers and
-  results rather than vague timelines.
+rhetorical_style: Methodical empiricist. Makes large claims but grounds them in benchmark results and published architecture
+  details. Relatively low hype-to-evidence ratio. Will cite specific papers and results rather than vague timelines.
 seminal_articles:
-- title: Introducing RFM-1 — Giving Robots Human-Like Reasoning Capabilities
+- title: Introducing RFM-1 — Giving Robots Human-Like Reasoning Capabilities (Covariant)
   url: https://covariant.ai/insights/introducing-rfm-1-giving-robots-human-like-reasoning-capabilities/
+- title: Amazon hires Covariant founders and bags non-exclusive license to robotic foundation models
+  url: https://retailtechinnovationhub.com/home/2024/9/2/amazon-hires-covariant-founders-and-employees-and-bags-non-exclusive-license-to-robotic-foundation-models
+- title: Amazon AI AGI SF Lab opening in San Francisco (The Robot Report)
+  url: https://www.therobotreport.com/amazon-ai-lab-opening-in-san-francisco/
 - title: DAGGER — A Reduction of Imitation Learning to No-Regret Online Learning
   url: https://arxiv.org/abs/1011.0686
-- title: Learning from Demonstrations for Real World Reinforcement Learning
-  url: https://arxiv.org/abs/1704.03732

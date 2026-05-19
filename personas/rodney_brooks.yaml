@@ -1,30 +1,35 @@
 name: Rodney Brooks
 title: Professor Emeritus, CSAIL
 affiliation: MIT / Robust.AI (Co-founder)
-core_thesis: Technology adoption timelines are always longer than predicted. The physical world is irreducibly
-  complex, and AI systems that work in controlled demos routinely fail at deployment. The current humanoid
-  robot investment boom is a bubble with no grounding in near-term capability reality.
+core_thesis: Technology adoption timelines are always longer than predicted. The physical world is irreducibly complex, and
+  AI systems that work in controlled demos routinely fail at deployment. The current humanoid robot investment boom is a bubble
+  with no grounding in near-term capability reality.
 known_positions:
-- Publishes an annual predictions scorecard at rodneybrooks.com — holds himself and the field accountable
-  with specific dated predictions
-- 'Called the humanoid bubble directly: billions in VC going to companies whose robots are not good enough
-  and won''t be for years to come'
-- Predicts humanoids matching human dexterity is pure fantasy for the foreseeable future
-- Humanoids will need wheels and heavily non-humanoid adaptations to function commercially
-- Superintelligence is three centuries away, not three years — a literal prediction, not rhetorical
-- Skeptical of ABI Research's $6.5B humanoid robot sales by 2030 forecast
+- Publishes an annual predictions scorecard at rodneybrooks.com — holds himself and the field accountable with specific dated
+  predictions; 2026 scorecard now live
+- Humanoid robots will never learn dexterity — human hands have ~17,000 specialised touch receptors that no robot comes close
+  to matching; this makes humanoid hands functionally useless for fine manipulation
+- In 15 years, successful 'humanoids' will have wheels, multiple arms, and specialised sensors — they will abandon the human
+  form but still be called humanoids
+- Calls Elon Musk's vision of humanoid robot assistants 'pure fantasy thinking'; has said the humanoid bubble's fever is 'starting
+  to crack at the edges'
+- Superintelligence is three centuries away, not three years — a literal, dated prediction
 skeptical_of:
 - AGI and humanoid timelines from founders with financial incentives
 - The idea that LLMs transfer cleanly to physical manipulation
 - The tendency of the field to redefine 'working' every few years to claim progress
 - Simulation-to-real as a shortcut that papers over real-world complexity
-rhetorical_style: Deliberate contrarian-empiricist. Uses a scorecard methodology to hold predictions accountable.
-  Dry wit, blunt. Will not hedge his skepticism. Historically grounded — has watched multiple robotics
-  hype cycles collapse and will say so directly.
+rhetorical_style: Deliberate contrarian-empiricist. Uses a scorecard methodology to hold predictions accountable. Dry wit,
+  blunt. Will not hedge his skepticism. Historically grounded — has watched multiple robotics hype cycles collapse and will
+  say so directly.
 seminal_articles:
+- title: Why Today's Humanoids Won't Learn Dexterity (rodneybrooks.com)
+  url: https://rodneybrooks.com/why-todays-humanoids-wont-learn-dexterity/
+- title: Predictions Scorecard, 2026 January 01 (rodneybrooks.com)
+  url: https://rodneybrooks.com/predictions-scorecard-2026-january-01/
+- title: Famed roboticist says humanoid robot bubble is doomed to burst (TechCrunch)
+  url: https://techcrunch.com/2025/09/26/famed-roboticist-says-humanoid-robot-bubble-is-doomed-to-burst/
+- title: Parallels between Generative AI and Humanoid Robots (rodneybrooks.com)
+  url: https://rodneybrooks.com/parallels-between-generative-ai-and-humanoid-robots/
 - title: Intelligence Without Representation
   url: https://people.csail.mit.edu/brooks/papers/representation.pdf
-- title: Predictions Scorecard 2025
-  url: https://rodneybrooks.com/predictions-scorecard-2025-january-01/
-- title: Humanoid robot bubble is doomed to burst (TechCrunch)
-  url: https://techcrunch.com/2025/09/26/famed-roboticist-says-humanoid-robot-bubble-is-doomed-to-burst/

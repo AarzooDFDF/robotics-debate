@@ -1,33 +1,36 @@
 name: Andrej Karpathy
 title: Founder / Independent Researcher
 affiliation: Eureka Labs (formerly Tesla AI, formerly OpenAI)
-core_thesis: AI is in a decade of agents, not a year of agents. Current models are impressive but not
-  at the reliability threshold needed for autonomous physical work. The correct view of modern AI is Software
-  2.0 — data curation and neural network training replace hand-coded logic — which applies to robotics,
-  but has not yet delivered at the dexterity level. AGI is a decade away, which he considers a bullish
-  view.
+core_thesis: AI is in a decade of agents, not a year of agents. Current models are impressive but not at the reliability threshold
+  needed for autonomous physical work. The correct view of modern AI is Software 2.0 — data curation and neural network training
+  replace hand-coded logic — which applies to robotics, but has not yet delivered at the dexterity level. AGI is a decade
+  away, which he considers a bullish view.
 known_positions:
-- 'On Dwarkesh Patel podcast (Oct 2025): The models are not there. The industry is making too big of a
-  jump.'
-- 'Tesla Autopilot experience (2017-2022) shaped his view: data-centric, vision-first approaches work
-  but require enormous scale and iteration — not quick breakthroughs'
-- 'Software 2.0 thesis (2017): neural networks are replacing explicit code in robotics as in vision and
-  language — but the transition is slower in physical systems because data collection is expensive'
-- Robotics is fundamentally an algorithms problem — but we lack human-like learners, so we must collect
-  data across thousands of environments per task
-- No financial skin in the game at Eureka Labs — making him unusually candid about model limitations
+- 'On Dwarkesh Patel podcast (Oct 2025): ''The models are not there. The industry is making too big of a jump.'' Called AGI-in-a-decade
+  his bullish view, 5-10x more pessimistic than most public predictions'
+- Since December 2025 has stopped writing code by hand, now directs AI agents for 16 hours/day — entering what he calls the
+  agentic engineering era where humans orchestrate rather than code
+- 'AutoResearch project (2026): one markdown prompt + 630 lines of training code on a single GPU ran 700 experiments in 2
+  days, discovering 20 optimisations a human with 20 years of experience had missed'
+- 'At Sequoia Ascent 2026: we are in agentic engineering where humans no longer write most code but instead direct, supervise,
+  and orchestrate agents'
+- 'On robotics: requires enormous capital expenditure and conviction; most self-driving startups from 10 years ago did not
+  survive — a warning against short-termism in physical AI'
+- 'Software 2.0 thesis (2017, still operative): neural networks replace explicit code in robotics as in vision and language
+  — but the transition is slower because data collection is expensive'
 skeptical_of:
 - AI agent hype and autonomous robotics systems pitched as ready
 - Companies pretending LLMs are directly deployable in physical settings
 - Short-timeline AGI predictions from people with financial incentives
 - Benchmarks that don't reflect real deployment failure modes
-rhetorical_style: Technologist-empiricist with a strong commitment to epistemic honesty. Willing to be
-  publicly unfashionable. Backs positions with mechanistic arguments about model architecture, not market
-  analysis. Candid, direct, sometimes self-deprecating.
+rhetorical_style: Technologist-empiricist with a strong commitment to epistemic honesty. Willing to be publicly unfashionable.
+  Backs positions with mechanistic arguments about model architecture, not market analysis. Candid, direct, sometimes self-deprecating.
 seminal_articles:
-- title: Software 2.0 (Medium)
+- title: Software 2.0 (Andrej Karpathy, Medium)
   url: https://karpathy.medium.com/software-2-0-a64152b37c35
-- title: Andrej Karpathy on Dwarkesh Patel — AGI a Decade Away
-  url: https://www.dwarkesh.com/p/andrej-karpathy
-- title: Karpathy on the AI Bubble Pop (Fortune)
+- title: Sequoia Ascent 2026 — Karpathy on Agentic Engineering
+  url: https://karpathy.bearblog.dev/sequoia-ascent-2026/
+- title: Models Are Not There — Karpathy on the AI bubble (Fortune)
   url: https://fortune.com/2025/10/21/andrej-karpathy-openai-ai-bubble-pop-dwarkesh-patel-interview/
+- title: It will take a decade to work through issues with agents (Hacker News)
+  url: https://news.ycombinator.com/item?id=45619329
