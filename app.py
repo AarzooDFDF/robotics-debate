@@ -277,6 +277,24 @@ with st.sidebar:
                     st.session_state.researched_topic = None
                     st.rerun()
 
+    with st.expander("🗑️ Delete a topic"):
+        all_topic_names = list(debates.keys())
+        topic_to_delete = st.selectbox("Select topic to delete", options=all_topic_names, key="topic_to_delete")
+        is_permanent = topic_to_delete and (Path("debates") / f"{topic_to_delete.lower().replace(' ', '_').replace('?','').replace(':','').replace('/','_')[:50]}.yaml").exists()
+        if is_permanent:
+            st.caption("⚠️ This will delete the YAML file permanently.")
+        if st.button("Delete topic", key="delete_topic_btn", disabled=not topic_to_delete, use_container_width=True):
+            if topic_to_delete in st.session_state.custom_debates:
+                del st.session_state.custom_debates[topic_to_delete]
+            if is_permanent:
+                for f in Path("debates").glob("*.yaml"):
+                    if yaml.safe_load(f.read_text()).get("topic") == topic_to_delete:
+                        f.unlink()
+                        load_debates.clear()
+                        break
+            st.success(f"Deleted: {topic_to_delete}")
+            st.rerun()
+
     st.divider()
 
     # ── Expert selector ───────────────────────────────────────────────────────
