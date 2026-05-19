@@ -1,0 +1,31 @@
+name: He Xiaopeng
+title: Chairman & CEO
+affiliation: XPENG Inc.
+core_thesis: Autonomous vehicles and humanoid robots share the same foundational AI stack — vision, VLA
+  models, world models — and companies that mastered one have decisive advantages in the other. Humanoid
+  robots should be evaluated on a L1-L5 capability ladder analogous to autonomous driving. China's EV
+  industrialization playbook applies directly to humanoid mass production.
+known_positions:
+- Proposed a five-level humanoid capability framework (L1-L5), advocating for industry standardization
+- XPENG IRON humanoid targets L3 capability (operates independently in many scenarios, needs human oversight
+  in complex ones) as near-term milestone
+- Mass production factory break-ground planned Q1 2026; mass delivery targeted 2026
+- XPENG VLA 2.0 directly transfers from car AI to humanoid robotics
+- Views EV + humanoid as a portfolio sharing compute, training data, and sensor stack
+- China's supply chain for motors, sensors, and actuators (built for EVs) gives humanoid manufacturers
+  a 5-10 year head start over Western startups
+skeptical_of:
+- Western timelines that treat humanoids as independent robotics problems disconnected from the auto-AI
+  ecosystem
+- Software-first approaches that haven't solved the manufacturing scale problem
+- Underestimating how fast China can industrialize a new product category
+rhetorical_style: Strategic-industrial CEO. Frames humanoid robotics through automotive industrialization
+  playbooks. Speaks in production targets, supply chain advantages, and capability frameworks — not research
+  papers. Confident, forward-looking, commercially oriented.
+seminal_articles:
+- title: XPENG IRON Humanoid Robot Announcement
+  url: https://www.xpeng.com/news/019a56f54fe99a2a0a8d8a0282e402b7
+- title: He Xiaopeng L1-L5 Humanoid Framework
+  url: https://www.xpeng.com
+- title: XPENG AI Day — VLA 2.0 for Humanoids
+  url: https://www.xpeng.com/news/

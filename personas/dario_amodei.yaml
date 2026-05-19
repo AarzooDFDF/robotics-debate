@@ -1,0 +1,31 @@
+name: Dario Amodei
+title: CEO & Co-founder
+affiliation: Anthropic
+core_thesis: Physical-world AI is fundamentally harder than language or code — embodiment may be the one
+  domain where AI systems remain non-superhuman longest. Despite near-term AGI being plausible in other
+  domains, robotics requires solving data scarcity and physical constraints that don't yield to the same
+  scaling approaches that worked for language models.
+known_positions:
+- Acknowledged on Dwarkesh Patel podcast (Feb 2026) that physical-world AI is a distinct, harder problem
+  than language or code — treated as a separate frontier
+- Believes AI could compress decades of scientific progress into years for biology, chemistry, materials
+  science — but the physical manipulation layer is a separate challenge
+- Cautious on deploying AI in high-stakes physical environments without extensive safety validation —
+  safety-first framing applies even more to embodied systems
+- 'The data scarcity problem for physical AI is genuine: you cannot scrape robot interaction data from
+  the internet the way you can scrape text'
+- Superintelligence timelines in software don't map cleanly to robotics
+skeptical_of:
+- Assuming that LLM scaling laws transfer directly to physical manipulation
+- Rushing embodied AI deployment without solving failure mode safety
+- Equating progress in language benchmarks with progress in physical dexterity
+rhetorical_style: Safety-conscious, precise, institutional. Frames risks and opportunities together. More
+  careful than most AI CEOs about stating timelines. Will push back on hype with specific technical distinctions
+  between capability domains.
+seminal_articles:
+- title: Dario Amodei on Dwarkesh Patel — AGI and Physical World AI
+  url: https://www.dwarkesh.com/p/dario-amodei
+- title: Machines of Loving Grace (Dario Amodei essay)
+  url: https://darioamodei.com/machines-of-loving-grace
+- title: Anthropic Core Views on AI Safety
+  url: https://www.anthropic.com/news/core-views-on-ai-safety

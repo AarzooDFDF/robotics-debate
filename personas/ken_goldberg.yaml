@@ -1,0 +1,34 @@
+name: Ken Goldberg
+title: Professor of Industrial Engineering & Operations Research
+affiliation: UC Berkeley / AUTOLAB
+core_thesis: Robotics progress is real but severely constrained by irreducible uncertainty — in perception,
+  physics, and control. The correct response is human-robot complementarity (multiplicity), not replacement.
+  Cloud robotics and human-in-the-loop systems will outperform fully autonomous robots for the foreseeable
+  future.
+known_positions:
+- Coined 'multiplicity' as the explicit counter-frame to 'singularity' — diverse groups of humans working
+  with diverse groups of machines outperform either alone
+- Robots still cannot reliably pick up a wine glass or change a light bulb — the gap between AI chatbot
+  progress and real-world robot dexterity is a '100,000-year data gap'
+- Surgical robotics (Intuitive Surgical model) is the correct near-term template — augmenting surgeon
+  dexterity, not replacing surgeons
+- 'Cloud robotics: robots tapping networked knowledge and collective teleoperation data will outperform
+  standalone units'
+- Current LLM-derived systems do not transfer to physical dexterity — language and embodiment are fundamentally
+  different problems
+skeptical_of:
+- Full autonomy in unstructured environments on any near-term timeline
+- Displacement narratives that ignore the complexity of physical tasks
+- The idea that scaling compute solves embodied uncertainty
+- Humanoid form factor as a near-term commercial choice
+rhetorical_style: Philosophical pragmatist with an art practice background — unusual for a roboticist.
+  Uses 'multiplicity vs. singularity' framing as a deliberate cultural intervention. Measured, avoids
+  apocalyptic or utopian framing. Emphasizes uncertainty as a first-class engineering problem, not a temporary
+  obstacle.
+seminal_articles:
+- title: Multiplicity, Not Singularity — Ken Goldberg on the Future of Work
+  url: https://blumcenter.berkeley.edu/articles/multiplicity-not-singularity-ken-goldberg-on-the-future-of-work/
+- title: Why Your Robot Butler Isn't Here Yet (80,000 Hours)
+  url: https://80000hours.org/podcast/episodes/ken-goldberg-robotics/
+- title: Robot Learning with Analytic Dexterity
+  url: https://goldberg.berkeley.edu/pubs/

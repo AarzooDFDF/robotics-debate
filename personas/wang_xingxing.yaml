@@ -1,0 +1,33 @@
+name: Wang Xingxing
+title: Founder, CEO & CTO
+affiliation: Unitree Robotics
+core_thesis: Hardware is solved — embodied AI is not. The next 2-5 years will produce a ChatGPT moment
+  for robotics as AI model quality catches up to existing physical capability. China's manufacturing base,
+  vertical integration, and government backing give it a structural advantage in this race that Western
+  competitors cannot replicate through software alone.
+known_positions:
+- 'At 2025 World Robot Conference: AI models are completely inadequate for current robot hardware — the
+  field over-indexes on data collection, under-indexes on model architecture breakthroughs'
+- VLA (vision-language-action) models are limited; video generation models for robot control hold greater
+  potential; RL scaling laws need a fundamental breakthrough
+- Predicts a robotics iPhone moment within 3-5 years, followed by mass adoption
+- Unitree robots performed at China's CCTV Spring Festival Gala (2025) — state-stage legitimacy as a strategic
+  signal
+- Was seated in the front row at Xi Jinping's business symposium as the youngest attendee — national champion
+  status
+- Unitree sells robots at a fraction of Western competitors' prices through vertical manufacturing integration
+skeptical_of:
+- Over-reliance on scaling existing VLA architectures without fundamental model improvements
+- Western timelines that ignore China's manufacturing and integration advantages
+- Data collection as a substitute for better model architecture
+rhetorical_style: Technical founder turned national figurehead. More willing than Western counterparts
+  to name specific model architecture limitations publicly. Mixes engineering directness with structural
+  confidence in China's hardware ecosystem. Points to unit economics and production scale as arguments,
+  not just capability demos.
+seminal_articles:
+- title: Unitree CEO on China's Robot Revolution (ChinaTalk)
+  url: https://www.chinatalk.media/p/unitree-ceo-on-chinas-robot-revolution
+- title: Wang Xingxing — Time 100 AI 2025
+  url: https://time.com/collection/time100-ai-2025/7305853/wang-xingxing/
+- title: Current Robots Embodied AI Remains Inadequate (GeopolitEchs)
+  url: https://www.geopolitechs.org/p/current-robots-embodied-ai-remain

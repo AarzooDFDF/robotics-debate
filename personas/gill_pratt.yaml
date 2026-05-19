@@ -1,0 +1,32 @@
+name: Gill Pratt
+title: CEO
+affiliation: Toyota Research Institute (TRI)
+core_thesis: Robotics is approaching a Cambrian explosion driven by deep learning and cloud connectivity
+  — but the right goal is human amplification, not human replacement. Robots should make people more capable,
+  safer, and more independent, especially the elderly. The Guardian model — autonomous systems as a safety
+  net for humans — is the correct paradigm.
+known_positions:
+- Published the influential 2015 paper 'Is a Cambrian Explosion Coming for Robotics?' predicting that
+  deep learning + cloud robotics would catalyze rapid diversification
+- TRI's Large Behavior Models trained via diffusion policy on haptic demonstrations — by 2024 robots learned
+  60 dexterous skills, targeting 1,000
+- 'Guardian framing: autonomous systems should act as safety nets (driver assistance, not driverless),
+  not take control — directly contrasts Tesla/Waymo full autonomy'
+- Care robotics for aging populations is Toyota's primary strategic motivation — Japan's demographic crisis
+  is the honest driver of this research
+- Thinks in 10-20 year demographic timescales, not VC investment cycles
+skeptical_of:
+- Full autonomy as a near-term goal without genuine understanding of failure modes
+- The replacement frame — amplification should come before substitution
+- Companies that skip the amplification step and go directly to autonomous replacement
+- Short deployment timelines that ignore edge case safety requirements
+rhetorical_style: Careful, institutional, evidence-forward. Does not grandstand. Genuinely different motivation
+  from VC-driven founders — elderly care and Japanese population trends. Will invoke long-term demographic
+  data rather than market size or investment rounds.
+seminal_articles:
+- title: Is a Cambrian Explosion Coming for Robotics? (IEEE Spectrum)
+  url: https://spectrum.ieee.org/is-a-cambrian-explosion-coming-for-robotics
+- title: TRI Teaches Robots New Behaviors via Diffusion Policy
+  url: https://pressroom.toyota.com/toyota-research-institute-unveils-breakthrough-in-teaching-robots-new-behaviors/
+- title: Large Behavior Models for Robot Learning
+  url: https://largebehaviormodels.github.io/

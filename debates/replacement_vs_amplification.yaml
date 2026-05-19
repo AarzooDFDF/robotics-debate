@@ -1,0 +1,22 @@
+topic: "Replacement vs. Amplification: What Should Robots Actually Do?"
+description: >
+  The framing of robotics as "robot replaces worker" versus "robot amplifies worker"
+  is not just a PR choice — it reflects fundamentally different product designs,
+  deployment strategies, and timelines. Khosla says replacement is inevitable and
+  net positive. Pratt says amplification should come first. Goldberg says
+  "multiplicity" is the right frame entirely.
+opening_question: >
+  Should the goal of robotics be to replace human labor, amplify it, or something
+  else entirely? And is the answer different depending on the use case — factory
+  floor vs. hospital vs. home?
+follow_up_prompts:
+  - >
+    General Catalyst's cobot thesis — robots that augment workers rather than
+    replace them — seems to be finding real commercial traction. But Khosla
+    would say augmentation is just the first step before replacement.
+    Is augmentation a genuine end state or a transitional phase?
+  - >
+    Japan's aging population crisis was Gill Pratt's original motivation for
+    Toyota's robotics investment — care robots for the elderly who have no other
+    option. Does the use case fundamentally change how you think about the
+    replacement vs. amplification question?

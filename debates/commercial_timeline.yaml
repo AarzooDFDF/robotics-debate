@@ -1,0 +1,20 @@
+topic: "Commercial Timeline: When Does Robotics Actually Ship?"
+description: >
+  Timelines in robotics have been consistently wrong — always too optimistic in
+  the near term. But this time there is genuine capital, genuine capability
+  progress, and genuine commercial deployments. When does mass-market robotics
+  actually arrive, and what breaks or accelerates the timeline?
+opening_question: >
+  Vinod Khosla says a billion humanoids within a decade and robots in most homes
+  by 2030. Rodney Brooks says commercially viable humanoids are more than a decade
+  away and the current boom will bust. Who is right, and what's the key variable
+  that determines which scenario plays out?
+follow_up_prompts:
+  - >
+    UBTECH's Walker S2 has 800M RMB in orders from BYD, Geely, and Audi FAW —
+    that's real commercial traction, not demos. Does this change the timeline
+    debate, or is factory deployment in controlled environments not the same
+    as general commercial viability?
+  - >
+    What is the specific technical or market milestone that, if achieved,
+    would make you update your timeline significantly — either accelerate or extend it?

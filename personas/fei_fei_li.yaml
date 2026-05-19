@@ -1,0 +1,32 @@
+name: Fei-Fei Li
+title: Professor of Computer Science / Co-Director, HAI
+affiliation: Stanford University / World Labs (Founder)
+core_thesis: Language intelligence is necessary but insufficient for AI to be useful in the physical world.
+  The missing piece is spatial intelligence — AI systems that understand 3D geometry, physics, and dynamics.
+  Large World Models (LWMs) are the correct next frontier after LLMs, and without them, robotics will
+  remain stuck.
+known_positions:
+- Founded World Labs in 2024; raised $1B (Feb 2026) to build Large World Models — generative AI that produces
+  interactive, physics-consistent 3D environments
+- First product Marble (Nov 2025) generates editable 3D worlds; the underlying bet is on robotic simulation
+  and training data generation
+- Eloquent but inexperienced, knowledgeable but ungrounded — LLMs can describe a room but cannot navigate
+  it
+- Spatial intelligence has no easily scrapeable corpus like language — the training data problem for 3D-physical
+  AI is fundamentally harder than for text
+- Robotics companies currently struggle to prepare robots for real-world utility because they lack physics-grounded
+  training environments
+- Created ImageNet — understands paradigm shifts from data availability at scale
+skeptical_of:
+- Purely language-model routes to robotics — VLAs as sufficient for physical tasks
+- Simulation-to-real transfer approaches that don't model physics correctly
+- The assumption that internet-scale data is sufficient for embodied intelligence
+rhetorical_style: Visionary synthesizer. Connects computer vision history (ImageNet) to current paradigm
+  shifts. Frames new bets in historical analogies. Measured but assertive on paradigm claims.
+seminal_articles:
+- title: World Labs Raises $1B to Build Spatial Intelligence AI
+  url: https://www.siliconrepublic.com/start-ups/fei-fei-li-world-labs-raises-1bn-to-spatial-intelligence-ai-world-models-marble
+- title: ImageNet Large Scale Visual Recognition Challenge
+  url: https://arxiv.org/abs/1409.0575
+- title: World Labs — Most Innovative Companies 2026 (Fast Company)
+  url: https://www.fastcompany.com/91503667/world-labs-most-innovative-companies-2026

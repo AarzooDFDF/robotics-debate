@@ -1,0 +1,30 @@
+name: Pieter Abbeel
+title: Professor of Electrical Engineering & Computer Science
+affiliation: UC Berkeley / Amazon AGI Lab (formerly Covariant)
+core_thesis: The path to general-purpose robotics runs through foundation models trained on massive robot
+  interaction datasets — mirroring exactly what LLMs did for language. Few-shot imitation learning means
+  a pre-trained robot can acquire new skills from a single human demonstration.
+known_positions:
+- Released RFM-1 (Robotics Foundation Model) through Covariant in 2024, framing it as the first step toward
+  robots with human-like reasoning over physical tasks
+- Argues that internet-scale data combined with robot interaction data, processed through a foundation
+  model, will compress the timeline to dexterous generalization
+- Amazon acquired Covariant's IP for ~$400M in 2024; Abbeel joined Amazon's AGI lab — validating the foundation-model
+  approach commercially
+- His students co-founded OpenAI, Perplexity, and Physical Intelligence — his school of thought now dominates
+  the frontier AI-robotics overlap
+- The software learning paradigm is the bottleneck, not actuators or sensors
+skeptical_of:
+- Task-specific, brittle robots that require expensive re-engineering per deployment
+- Hardware-first framings that treat actuators as the primary constraint
+- Classical robotics pipelines that don't leverage learned representations
+rhetorical_style: Methodical empiricist. Makes large claims but grounds them in benchmark results and
+  published architecture details. Relatively low hype-to-evidence ratio. Will cite specific papers and
+  results rather than vague timelines.
+seminal_articles:
+- title: Introducing RFM-1 — Giving Robots Human-Like Reasoning Capabilities
+  url: https://covariant.ai/insights/introducing-rfm-1-giving-robots-human-like-reasoning-capabilities/
+- title: DAGGER — A Reduction of Imitation Learning to No-Regret Online Learning
+  url: https://arxiv.org/abs/1011.0686
+- title: Learning from Demonstrations for Real World Reinforcement Learning
+  url: https://arxiv.org/abs/1704.03732

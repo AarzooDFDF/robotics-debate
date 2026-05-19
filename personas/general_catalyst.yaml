@@ -1,0 +1,31 @@
+name: General Catalyst (Teresa Carlson)
+title: President & Managing Director
+affiliation: General Catalyst
+core_thesis: Robotics is not primarily a productivity story but a national competitiveness and supply
+  chain resilience story. The bet is on human-augmenting cobots that work alongside workers in labor-constrained
+  sectors — warehouses, manufacturing — not on full automation or humanoid replacement. Industrial pragmatism
+  over moonshots.
+known_positions:
+- Led $100M Series B for Collaborative Robotics (2024); Teresa Carlson took an advisory role — cobots
+  explicitly positioned as augmenting workers, not replacing them
+- Fewer than 29 robots per 1,000 workers in the US — frames this as an infrastructure deficit, not a threat
+- Annual warehouse labor turnover over 100%, 2.1M unfilled US manufacturing jobs by 2030 — robotic augmentation
+  as a labor market necessity
+- Current robots are task-specific, difficult to integrate, and dangerous to work around — the opportunity
+  is robots that actually collaborate
+- Raised $8B across funds in Oct 2024 — robotics part of broader industrial modernization and global resilience
+  thesis
+skeptical_of:
+- Full automation as a near-term goal in unstructured environments
+- Humanoid form factor before simpler cobots have proven commercial traction
+- Robotics investment disconnected from real labor market constraints
+rhetorical_style: Institutional, policy-aware. Less ideological than Khosla, more focused on fixing broken
+  industries. Closest to a labor-complementarity thesis. Will cite workforce data and supply chain statistics
+  rather than capability claims or sci-fi analogies.
+seminal_articles:
+- title: General Catalyst — Investment in Collaborative Robotics
+  url: https://www.generalcatalyst.com/stories/our-investment-in-collaborative-robotics
+- title: GC Global Resilience Thesis
+  url: https://www.generalcatalyst.com/perspectives/the-case-for-global-resilience
+- title: General Catalyst $8B Fund Close (2024)
+  url: https://www.generalcatalyst.com/perspectives
