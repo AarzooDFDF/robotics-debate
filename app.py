@@ -1,5 +1,6 @@
 """Robotics Expert Debate — Streamlit frontend."""
 
+import json
 import os
 from pathlib import Path
 
@@ -78,6 +79,66 @@ def load_debates() -> dict:
     }
 
 
+# ── Expert research via LLM ───────────────────────────────────────────────────
+RESEARCH_PROMPT = """You are a research assistant building a persona profile for a robotics debate simulation.
+
+Research {name} from {affiliation} and return a JSON object with exactly these fields:
+
+{{
+  "title": "their current job title",
+  "core_thesis": "their main argument about robotics in 2-3 sentences",
+  "known_positions": [
+    "specific position or claim they have made publicly",
+    "another specific position",
+    "another specific position",
+    "another specific position"
+  ],
+  "skeptical_of": [
+    "something they push back on or are critical of",
+    "another thing they are skeptical of"
+  ],
+  "rhetorical_style": "one sentence describing how they argue — e.g. empiricist, contrarian, visionary",
+  "seminal_articles": [
+    {{"title": "Title of a real article, paper, or interview they published", "url": "https://real-url-if-known-otherwise-omit"}},
+    {{"title": "Another real piece of work", "url": "https://real-url-if-known-otherwise-omit"}}
+  ]
+}}
+
+Rules:
+- Only include positions and articles you are confident are accurate based on their actual public record.
+- For URLs: only include if you are highly confident the URL is real and correct. If unsure, use an empty string.
+- Keep core_thesis and rhetorical_style concise.
+- Return only the JSON object, no other text."""
+
+
+def research_expert(name: str, affiliation: str, client: OpenAI, model: str) -> dict:
+    prompt = RESEARCH_PROMPT.format(name=name, affiliation=affiliation)
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=800,
+        messages=[
+            {"role": "system", "content": "You are a precise research assistant. Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    raw = response.choices[0].message.content.strip()
+    # Strip markdown code fences if present
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    return json.loads(raw.strip())
+
+
+def save_persona_yaml(persona: dict) -> Path:
+    """Save a persona dict as a YAML file in personas/ and clear the cache."""
+    safe_name = persona["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
+    path = Path("personas") / f"{safe_name}.yaml"
+    path.write_text(yaml.dump(persona, allow_unicode=True, default_flow_style=False, sort_keys=False, width=100))
+    load_personas.clear()
+    return path
+
+
 # ── Session state ─────────────────────────────────────────────────────────────
 for key, default in [
     ("debate_history", []),
@@ -86,11 +147,12 @@ for key, default in [
     ("debate_experts", []),
     ("custom_personas", {}),
     ("custom_debates", {}),
+    ("researched_expert", None),   # holds LLM research result pending confirmation
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
 
-# Merge loaded + custom
+# Merge loaded + custom (reload after any permanent saves)
 personas = {**load_personas(), **st.session_state.custom_personas}
 debates = {**load_debates(), **st.session_state.custom_debates}
 
@@ -113,7 +175,7 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Debate topic picker + custom topic form ───────────────────────────────
+    # ── Debate topic ──────────────────────────────────────────────────────────
     selected_topic = st.selectbox("Debate Topic", options=list(debates.keys()))
     if selected_topic:
         st.caption(debates[selected_topic]["description"])
@@ -121,13 +183,9 @@ with st.sidebar:
     with st.expander("➕ Suggest a debate topic"):
         with st.form("custom_topic_form", clear_on_submit=True):
             ct_name = st.text_input("Topic title", placeholder="e.g. Will dextrous hands commoditise?")
-            ct_desc = st.text_area("Description (1-2 sentences)", placeholder="What is this debate about?", height=80)
-            ct_question = st.text_area("Opening question", placeholder="The specific question you want the experts to debate.", height=100)
-            ct_followup = st.text_area(
-                "Follow-up question (optional)",
-                placeholder="A harder follow-up to push the debate further.",
-                height=80,
-            )
+            ct_desc = st.text_area("Description (1-2 sentences)", height=68)
+            ct_question = st.text_area("Opening question", height=90)
+            ct_followup = st.text_area("Follow-up question (optional)", height=68)
             if st.form_submit_button("Add topic"):
                 if ct_name and ct_question:
                     st.session_state.custom_debates[ct_name] = {
@@ -143,7 +201,7 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Expert picker + custom expert form ────────────────────────────────────
+    # ── Expert selector ───────────────────────────────────────────────────────
     selected_names = st.multiselect(
         "Select Experts (2–6)",
         options=list(personas.keys()),
@@ -152,67 +210,63 @@ with st.sidebar:
     )
 
     with st.expander("➕ Suggest an expert"):
-        with st.form("custom_expert_form", clear_on_submit=True):
-            ce_name = st.text_input("Full name", placeholder="e.g. Marc Raibert")
-            ce_title = st.text_input("Title", placeholder="e.g. Founder & Executive Chairman")
-            ce_affil = st.text_input("Affiliation", placeholder="e.g. Boston Dynamics")
-            ce_thesis = st.text_area(
-                "Core thesis",
-                placeholder="Their main argument in 2-3 sentences.",
-                height=100,
-            )
-            ce_positions = st.text_area(
-                "Known positions (one per line)",
-                placeholder="- Believes legged robots will outperform wheeled ones\n- Argues dynamic balance is the key unlock",
-                height=120,
-            )
-            ce_skeptical = st.text_area(
-                "Sceptical of (one per line)",
-                placeholder="- Humanoid form factor as near-term commercial winner",
-                height=80,
-            )
-            ce_style = st.text_input(
-                "Rhetorical style",
-                placeholder="e.g. Pragmatic engineer, demo-first, dismissive of hype",
-            )
-            ce_url1_title = st.text_input("Article 1 title (optional)", placeholder="e.g. Boston Dynamics Blog")
-            ce_url1 = st.text_input("Article 1 URL (optional)", placeholder="https://...")
-            ce_url2_title = st.text_input("Article 2 title (optional)")
-            ce_url2 = st.text_input("Article 2 URL (optional)", placeholder="https://...")
+        ce_name = st.text_input("Full name", placeholder="e.g. Marc Raibert", key="ce_name")
+        ce_affil = st.text_input("Affiliation", placeholder="e.g. Boston Dynamics", key="ce_affil")
+        ce_save = st.selectbox(
+            "Save preference",
+            options=["This session only", "Save permanently (adds to repo)"],
+            key="ce_save",
+        )
 
-            if st.form_submit_button("Add expert"):
-                if ce_name and ce_thesis:
-                    articles = []
-                    if ce_url1_title and ce_url1:
-                        articles.append({"title": ce_url1_title, "url": ce_url1})
-                    if ce_url2_title and ce_url2:
-                        articles.append({"title": ce_url2_title, "url": ce_url2})
+        research_btn = st.button(
+            "🔍 Research & Preview",
+            disabled=not (ce_name and api_key),
+            use_container_width=True,
+        )
 
-                    positions = [
-                        p.lstrip("- ").strip()
-                        for p in ce_positions.strip().splitlines()
-                        if p.strip()
-                    ]
-                    skeptical = [
-                        s.lstrip("- ").strip()
-                        for s in ce_skeptical.strip().splitlines()
-                        if s.strip()
-                    ]
+        if research_btn and ce_name:
+            with st.spinner(f"Researching {ce_name}…"):
+                try:
+                    client_r = OpenAI(api_key=api_key, base_url=provider["base_url"])
+                    result = research_expert(ce_name, ce_affil, client_r, provider["models"][0])
+                    result["name"] = ce_name
+                    result["affiliation"] = ce_affil or result.get("affiliation", "Independent")
+                    st.session_state.researched_expert = result
+                except Exception as e:
+                    st.error(f"Research failed: {e}")
 
-                    st.session_state.custom_personas[ce_name] = {
-                        "name": ce_name,
-                        "title": ce_title or "Expert",
-                        "affiliation": ce_affil or "Independent",
-                        "core_thesis": ce_thesis,
-                        "known_positions": positions,
-                        "skeptical_of": skeptical,
-                        "rhetorical_style": ce_style or "Direct and opinionated.",
-                        "seminal_articles": articles,
-                    }
-                    st.success(f"Added: {ce_name}")
+        # Show preview + confirm
+        if st.session_state.researched_expert:
+            r = st.session_state.researched_expert
+            st.markdown(f"**{r['name']}** — {r.get('title', '')}")
+            st.caption(r.get("affiliation", ""))
+            st.markdown(f"_{r.get('core_thesis', '')}_")
+            if r.get("known_positions"):
+                st.markdown("**Positions:** " + " · ".join(r["known_positions"][:2]))
+            if r.get("seminal_articles"):
+                for a in r["seminal_articles"][:2]:
+                    if a.get("url"):
+                        st.markdown(f"[{a['title']}]({a['url']})")
+                    else:
+                        st.markdown(f"• {a['title']}")
+            st.caption("⚠️ Verify facts before use — based on LLM training data.")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✓ Add", use_container_width=True, type="primary"):
+                    persona = st.session_state.researched_expert
+                    st.session_state.custom_personas[persona["name"]] = persona
+                    if ce_save == "Save permanently (adds to repo)":
+                        saved_path = save_persona_yaml(persona)
+                        st.success(f"Saved to {saved_path.name}")
+                    else:
+                        st.success(f"Added for this session.")
+                    st.session_state.researched_expert = None
                     st.rerun()
-                else:
-                    st.warning("Name and core thesis are required.")
+            with col2:
+                if st.button("✗ Discard", use_container_width=True):
+                    st.session_state.researched_expert = None
+                    st.rerun()
 
     st.divider()
 
@@ -238,7 +292,6 @@ st.title("🤖 Robotics Expert Debate")
 if selected_topic:
     st.subheader(selected_topic)
 
-# Expert cards (pre-debate)
 if not st.session_state.debate_complete and not run_btn and selected_names:
     st.markdown("#### Participating Experts")
     cols = st.columns(min(len(selected_names), 3))
@@ -247,13 +300,16 @@ if not st.session_state.debate_complete and not run_btn and selected_names:
         with cols[i % 3]:
             with st.container(border=True):
                 st.markdown(f"**{name}**")
-                st.caption(f"{p['title']} · {p['affiliation']}")
+                st.caption(f"{p.get('title', '')} · {p.get('affiliation', '')}")
                 st.markdown(f"_{p['core_thesis'][:120].rstrip()}…_")
                 articles = p.get("seminal_articles", [])
                 if articles:
                     with st.expander("Seminal articles"):
                         for a in articles:
-                            st.markdown(f"[{a['title']}]({a['url']})")
+                            if a.get("url"):
+                                st.markdown(f"[{a['title']}]({a['url']})")
+                            else:
+                                st.markdown(f"• {a['title']}")
 
 # ── Run debate ────────────────────────────────────────────────────────────────
 def make_client(api_key: str, base_url: str) -> OpenAI:
@@ -292,7 +348,8 @@ if run_btn and not run_disabled:
             if exchange["content"]:
                 st.write(exchange["content"])
             for a in exchange.get("articles", []):
-                st.markdown(f"[{a['title']}]({a['url']})")
+                if a.get("url"):
+                    st.markdown(f"[{a['title']}]({a['url']})")
 
     st.session_state.debate_complete = True
     st.success("Debate complete.")
@@ -312,7 +369,8 @@ elif st.session_state.debate_complete and st.session_state.debate_history:
             if exchange["content"]:
                 st.write(exchange["content"])
             for a in exchange.get("articles", []):
-                st.markdown(f"[{a['title']}]({a['url']})")
+                if a.get("url"):
+                    st.markdown(f"[{a['title']}]({a['url']})")
 
 # ── Save to Obsidian ──────────────────────────────────────────────────────────
 if st.session_state.debate_complete and st.session_state.debate_history:
