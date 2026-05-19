@@ -80,6 +80,26 @@ def load_debates() -> dict:
 
 
 # ── Expert research via LLM ───────────────────────────────────────────────────
+TOPIC_PROMPT = """You are designing a structured debate for robotics researchers, investors, and executives.
+
+The user wants to debate: "{title}"
+
+Return a JSON object with exactly these fields:
+
+{{
+  "description": "2-3 sentence explanation of why this is a contested, important question in robotics right now",
+  "opening_question": "A sharp, specific opening question (2-4 sentences) that forces participants to take a real position. Name specific companies, technologies, or data points to make it concrete.",
+  "follow_up_prompts": [
+    "A harder follow-up that pushes participants to address a specific counterargument or name a concrete number/timeline",
+    "A second follow-up that introduces a new angle or forces the weakest position to be defended"
+  ]
+}}
+
+Rules:
+- Make the opening question genuinely contestable — not one that everyone agrees on.
+- Reference real companies, products, or recent events where possible.
+- Return only the JSON object, no other text."""
+
 RESEARCH_PROMPT = """You are a research assistant building a persona profile for a robotics debate simulation.
 
 Research {name} from {affiliation} and return a JSON object with exactly these fields:
@@ -109,6 +129,32 @@ Rules:
 - For URLs: only include if you are highly confident the URL is real and correct. If unsure, use an empty string.
 - Keep core_thesis and rhetorical_style concise.
 - Return only the JSON object, no other text."""
+
+
+def research_topic(title: str, client: OpenAI, model: str) -> dict:
+    prompt = TOPIC_PROMPT.format(title=title)
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=600,
+        messages=[
+            {"role": "system", "content": "You are a precise research assistant. Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    raw = response.choices[0].message.content.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    return json.loads(raw.strip())
+
+
+def save_debate_yaml(debate: dict) -> Path:
+    safe_name = debate["topic"].lower().replace(" ", "_").replace("?", "").replace(":", "").replace("/", "_")[:50]
+    path = Path("debates") / f"{safe_name}.yaml"
+    path.write_text(yaml.dump(debate, allow_unicode=True, default_flow_style=False, sort_keys=False, width=100))
+    load_debates.clear()
+    return path
 
 
 def research_expert(name: str, affiliation: str, client: OpenAI, model: str) -> dict:
@@ -147,7 +193,8 @@ for key, default in [
     ("debate_experts", []),
     ("custom_personas", {}),
     ("custom_debates", {}),
-    ("researched_expert", None),   # holds LLM research result pending confirmation
+    ("researched_expert", None),
+    ("researched_topic", None),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -181,23 +228,54 @@ with st.sidebar:
         st.caption(debates[selected_topic]["description"])
 
     with st.expander("➕ Suggest a debate topic"):
-        with st.form("custom_topic_form", clear_on_submit=True):
-            ct_name = st.text_input("Topic title", placeholder="e.g. Will dextrous hands commoditise?")
-            ct_desc = st.text_area("Description (1-2 sentences)", height=68)
-            ct_question = st.text_area("Opening question", height=90)
-            ct_followup = st.text_area("Follow-up question (optional)", height=68)
-            if st.form_submit_button("Add topic"):
-                if ct_name and ct_question:
-                    st.session_state.custom_debates[ct_name] = {
-                        "topic": ct_name,
-                        "description": ct_desc or ct_name,
-                        "opening_question": ct_question,
-                        "follow_up_prompts": [ct_followup] if ct_followup else [],
-                    }
-                    st.success(f"Added: {ct_name}")
+        ct_name = st.text_input("Topic title", placeholder="e.g. Will dextrous hands commoditise?", key="ct_name")
+        ct_save = st.selectbox(
+            "Save preference",
+            options=["This session only", "Save permanently (adds to repo)"],
+            key="ct_save",
+        )
+
+        topic_research_btn = st.button(
+            "🔍 Research & Preview",
+            key="topic_research_btn",
+            disabled=not ct_name,
+            use_container_width=True,
+        )
+
+        if topic_research_btn and ct_name:
+            with st.spinner(f'Generating debate for "{ct_name}"…'):
+                try:
+                    client_r = OpenAI(api_key=api_key, base_url=provider["base_url"])
+                    result = research_topic(ct_name, client_r, provider["models"][0])
+                    result["topic"] = ct_name
+                    st.session_state.researched_topic = result
+                except Exception as e:
+                    st.error(f"Research failed: {e}")
+
+        if st.session_state.researched_topic:
+            t = st.session_state.researched_topic
+            st.markdown(f"**{t['topic']}**")
+            st.caption(t.get("description", ""))
+            st.markdown(f"*Opening:* {t.get('opening_question', '')[:150]}…")
+            for i, fu in enumerate(t.get("follow_up_prompts", []), 1):
+                st.markdown(f"*Follow-up {i}:* {fu[:100]}…")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✓ Add", key="add_topic_btn", use_container_width=True, type="primary"):
+                    topic = st.session_state.researched_topic
+                    st.session_state.custom_debates[topic["topic"]] = topic
+                    if ct_save == "Save permanently (adds to repo)":
+                        saved_path = save_debate_yaml(topic)
+                        st.success(f"Saved to {saved_path.name}")
+                    else:
+                        st.success("Added for this session.")
+                    st.session_state.researched_topic = None
                     st.rerun()
-                else:
-                    st.warning("Title and opening question are required.")
+            with col2:
+                if st.button("✗ Discard", key="discard_topic_btn", use_container_width=True):
+                    st.session_state.researched_topic = None
+                    st.rerun()
 
     st.divider()
 
