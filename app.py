@@ -1,7 +1,9 @@
 """Robotics Expert Debate — Streamlit frontend."""
 
+import io
 import json
 import os
+import re
 import datetime
 from pathlib import Path
 
@@ -16,6 +18,12 @@ try:
     FETCH_AVAILABLE = True
 except ImportError:
     FETCH_AVAILABLE = False
+
+try:
+    from pypdf import PdfReader as _PdfReader
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
 
 from agents.orchestrator import DebateOrchestrator
 from utils.obsidian import save_to_obsidian
@@ -244,6 +252,23 @@ Return a JSON object with exactly these fields:
 
 Return only valid JSON, no markdown, no other text."""
 
+PROCESS_PDF_PROMPT = """You are distilling a research paper or document for a robotics knowledge base.
+
+Filename: {filename}
+Content (excerpt):
+{content}
+
+{attribution}
+
+Return a JSON object with exactly these fields:
+{{
+  "title": "A short descriptive title for this document (under 12 words)",
+  "key_insights": "3-5 sentences distilling the most important findings, arguments, or data points relevant to robotics research or investment",
+  "tags": ["2-5 tags — choose from: Foundation Models, Humanoids, Hardware, Software, China, VC Funding, Commercial Timeline, Dexterity, Autonomous Vehicles, LLMs, AI Safety, Labor, Manufacturing, Policy, Spatial Intelligence, Simulation"]
+}}
+
+Return only valid JSON, no markdown, no other text."""
+
 
 # ── LLM helpers ───────────────────────────────────────────────────────────────
 def _parse_json(raw: str) -> dict:
@@ -281,17 +306,71 @@ def research_expert(name: str, affiliation: str, client: OpenAI, model: str) -> 
     return _parse_json(response.choices[0].message.content)
 
 
+def gdrive_to_direct(url: str) -> str:
+    """Convert a Google Drive share link to a direct-download URL."""
+    m = re.search(r"/d/([a-zA-Z0-9_-]+)", url)
+    if m:
+        return f"https://drive.google.com/uc?export=download&id={m.group(1)}"
+    return url
+
+
 def fetch_url_text(url: str) -> str:
     if not FETCH_AVAILABLE:
         return ""
     try:
-        resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        target = gdrive_to_direct(url)
+        resp = requests.get(target, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        # If the response looks like a PDF, extract text from it
+        if "application/pdf" in resp.headers.get("Content-Type", ""):
+            return _extract_pdf_bytes(resp.content)
         soup = BeautifulSoup(resp.text, "html.parser")
         for tag in soup(["script", "style", "nav", "footer", "header"]):
             tag.decompose()
-        return soup.get_text(separator="\n", strip=True)[:4000]
+        return soup.get_text(separator="\n", strip=True)[:5000]
     except Exception:
         return ""
+
+
+def _extract_pdf_bytes(data: bytes) -> str:
+    if not PDF_AVAILABLE:
+        return ""
+    try:
+        reader = _PdfReader(io.BytesIO(data))
+        pages = [page.extract_text() or "" for page in reader.pages]
+        return "\n".join(pages)[:6000]
+    except Exception:
+        return ""
+
+
+def extract_pdf_text(uploaded_file) -> str:
+    """Extract text from a Streamlit UploadedFile PDF object."""
+    return _extract_pdf_bytes(uploaded_file.read())
+
+
+def process_pdf(uploaded_file, attribution: str, client: OpenAI, model: str) -> dict:
+    filename = uploaded_file.name
+    content = extract_pdf_text(uploaded_file) or "(Could not extract PDF text)"
+    attr_ctx = (
+        f"This document is being attributed to expert: {attribution}. "
+        "Focus your distillation on insights relevant to their known positions."
+        if attribution != "Independent Research"
+        else "This is independent research not attributed to a specific expert."
+    )
+    prompt = PROCESS_PDF_PROMPT.format(filename=filename, content=content, attribution=attr_ctx)
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=500,
+        messages=[
+            {"role": "system", "content": "Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    result = _parse_json(response.choices[0].message.content)
+    result["filename"] = filename
+    result["source_type"] = "pdf"
+    result["date_added"] = str(datetime.date.today())
+    result["attribution"] = attribution
+    return result
 
 
 def process_url(url: str, attribution: str, client: OpenAI, model: str) -> dict:
@@ -757,7 +836,12 @@ with tab_experts:
                 if data_sources:
                     with st.expander(f"📎 Data sources ({len(data_sources)})"):
                         for ds in data_sources:
-                            st.markdown(f"[{ds.get('title', ds['url'])}]({ds['url']})")
+                            ds_url = ds.get("url", "")
+                            ds_title = ds.get("title") or ds.get("filename") or ds_url or "Untitled"
+                            if ds_url:
+                                st.markdown(f"[{ds_title}]({ds_url})")
+                            else:
+                                st.markdown(f"**{ds_title}** _(PDF)_")
                             st.caption(ds.get("key_insights", "")[:150])
                             if ds.get("tags"):
                                 st.markdown(render_tag_pills(ds["tags"]), unsafe_allow_html=True)
@@ -798,63 +882,99 @@ with tab_experts:
 with tab_data:
     st.subheader("Data Dump — Enrich the Knowledge Base")
     st.markdown(
-        "Paste article, interview, or paper URLs below. "
-        "The app fetches and analyses each one, then stores the extracted insights "
-        "under a specific expert or as standalone research."
+        "Feed the knowledge base with articles, interviews, papers, or PDFs. "
+        "Insights are distilled by the LLM and stored under a specific expert "
+        "or as independent research."
     )
 
     if not FETCH_AVAILABLE:
         st.info(
-            "**Tip:** Install `requests` and `beautifulsoup4` for full URL fetching: "
-            "`pip install requests beautifulsoup4` — the app will still work without "
-            "them, but the LLM will only see the URL, not the page text."
+            "Install `requests` and `beautifulsoup4` for full URL fetching: "
+            "`pip install requests beautifulsoup4`"
+        )
+    if not PDF_AVAILABLE:
+        st.info("Install `pypdf` to enable PDF uploads: `pip install pypdf`")
+
+    # ── Inputs (outside form so file_uploader state persists) ────────────────
+    dd_col1, dd_col2 = st.columns([3, 2])
+    with dd_col1:
+        urls_input = st.text_area(
+            "URLs — paste one per line",
+            placeholder=(
+                "https://techcrunch.com/...\n"
+                "https://drive.google.com/file/d/ABC123/view  ← Google Drive links work too"
+            ),
+            height=120,
+            key="dd_urls",
+        )
+    with dd_col2:
+        uploaded_pdfs = st.file_uploader(
+            "Upload PDFs",
+            type="pdf",
+            accept_multiple_files=True,
+            key="dd_pdfs",
+            help="Drag and drop one or more PDFs. Text is extracted locally and sent to the LLM.",
         )
 
-    with st.form("data_dump_form"):
-        urls_input = st.text_area(
-            "URLs (one per line)",
-            placeholder="https://...\nhttps://...",
-            height=130,
-        )
-        attribution = st.selectbox(
-            "Classify under",
-            options=["Independent Research"] + list(personas.keys()),
-            help="Attribute to a specific expert or file as independent research.",
-        )
-        process_btn = st.form_submit_button(
-            "🔍 Fetch & Analyse",
-            type="primary",
-            use_container_width=True,
-        )
+    attribution = st.selectbox(
+        "Classify under",
+        options=["Independent Research"] + list(personas.keys()),
+        help="Attribute to a specific expert (raises their completeness score) or file as independent research.",
+        key="dd_attribution",
+    )
+
+    process_btn = st.button(
+        "🔍 Fetch & Analyse",
+        type="primary",
+        use_container_width=True,
+        disabled=(provider["requires_key"] and not api_key),
+        key="dd_process",
+    )
 
     if process_btn:
-        urls = [u.strip() for u in urls_input.strip().splitlines() if u.strip()]
-        if not urls:
-            st.warning("Paste at least one URL.")
-        elif provider["requires_key"] and not api_key:
-            st.warning("Add an API key in the sidebar first.")
+        urls = [u.strip() for u in (urls_input or "").splitlines() if u.strip()]
+        pdfs = uploaded_pdfs or []
+        if not urls and not pdfs:
+            st.warning("Add at least one URL or upload a PDF.")
         else:
             client_d = OpenAI(api_key=api_key, base_url=provider["base_url"])
             new_sources = []
             for url in urls:
-                with st.spinner(f"Processing {url[:70]}…"):
+                label = url[:70] + ("…" if len(url) > 70 else "")
+                with st.spinner(f"Fetching {label}"):
                     try:
                         result = process_url(url, attribution, client_d, model_choice)
                         new_sources.append(result)
                     except Exception as e:
                         st.error(f"Failed on {url}: {e}")
+            for pdf in pdfs:
+                with st.spinner(f"Reading {pdf.name}…"):
+                    try:
+                        result = process_pdf(pdf, attribution, client_d, model_choice)
+                        new_sources.append(result)
+                    except Exception as e:
+                        st.error(f"Failed on {pdf.name}: {e}")
             st.session_state.processed_sources = new_sources
 
+    # ── Preview ───────────────────────────────────────────────────────────────
     if st.session_state.processed_sources:
         st.markdown("---")
-        st.markdown("#### Extracted Insights — Review before saving")
+        st.markdown("#### Distilled Insights — Review before saving")
 
         for src in st.session_state.processed_sources:
             with st.container(border=True):
                 attr_display = src.get("attribution", "Independent Research")
-                st.markdown(f"**{src.get('title', src['url'])}**")
-                st.caption(f"Attribution: {attr_display} · {src.get('date_added', '')}")
-                st.markdown(f"[{src['url']}]({src['url']})")
+                is_pdf = src.get("source_type") == "pdf"
+                title = src.get("title") or src.get("filename") or src.get("url", "Untitled")
+                url_val = src.get("url", "")
+
+                header = f"**{title}**" + (" _(PDF)_" if is_pdf else "")
+                st.markdown(header)
+                st.caption(f"→ {attr_display} · {src.get('date_added', '')}")
+                if url_val:
+                    st.markdown(f"[{url_val}]({url_val})")
+                elif src.get("filename"):
+                    st.caption(f"File: {src['filename']}")
                 st.markdown(src.get("key_insights", ""))
                 if src.get("tags"):
                     st.markdown(render_tag_pills(src["tags"]), unsafe_allow_html=True)
@@ -873,7 +993,7 @@ with tab_data:
                             save_independent_research(src)
                         saved += 1
                     except Exception as e:
-                        st.error(f"Could not save {src.get('url', '')}: {e}")
+                        st.error(f"Could not save {src.get('url') or src.get('filename', '')}: {e}")
                 if saved:
                     st.success(f"Saved {saved} source(s). Switch to the Experts tab to see them.")
                 st.session_state.processed_sources = []
