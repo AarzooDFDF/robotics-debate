@@ -326,30 +326,62 @@ def fetch_url_text(url: str) -> str:
         soup = BeautifulSoup(resp.text, "html.parser")
         for tag in soup(["script", "style", "nav", "footer", "header"]):
             tag.decompose()
-        return soup.get_text(separator="\n", strip=True)[:5000]
+        return soup.get_text(separator="\n", strip=True)[:2500]
     except Exception:
         return ""
 
 
-def _extract_pdf_bytes(data: bytes) -> str:
+def _extract_pdf_bytes(data: bytes, max_chars: int = 2000) -> str:
     if not PDF_AVAILABLE:
         return ""
     try:
         reader = _PdfReader(io.BytesIO(data))
         pages = [page.extract_text() or "" for page in reader.pages]
-        return "\n".join(pages)[:6000]
+        return "\n".join(pages)[:max_chars]
     except Exception:
         return ""
 
 
-def extract_pdf_text(uploaded_file) -> str:
-    """Extract text from a Streamlit UploadedFile PDF object."""
-    return _extract_pdf_bytes(uploaded_file.read())
+def extract_pdf_text(uploaded_file, max_chars: int = 2000) -> str:
+    uploaded_file.seek(0)
+    return _extract_pdf_bytes(uploaded_file.read(), max_chars)
+
+
+def _call_llm_with_retry(client: OpenAI, model: str, prompt: str, max_tokens: int) -> str:
+    """Call the LLM, retrying once with a truncated prompt on connection errors.
+
+    Ollama's default context window is 2048 tokens. If the combined prompt
+    exceeds that, Ollama drops the TCP connection (reported as APIConnectionError).
+    On failure we shorten the content block and retry once.
+    """
+    from openai import APIConnectionError
+
+    def _call(p: str) -> str:
+        response = client.chat.completions.create(
+            model=model,
+            max_tokens=max_tokens,
+            messages=[
+                {"role": "system", "content": "Return only valid JSON."},
+                {"role": "user", "content": p},
+            ],
+        )
+        return response.choices[0].message.content
+
+    try:
+        return _call(prompt)
+    except APIConnectionError:
+        # Truncate everything after "Content (excerpt):" or "Content:" to 800 chars
+        for marker in ["Content (excerpt):\n", "Content:\n"]:
+            if marker in prompt:
+                head, rest = prompt.split(marker, 1)
+                truncated = head + marker + rest[:800] + "\n[truncated]\n" + rest.split("\n\n")[-1]
+                return _call(truncated)
+        raise
 
 
 def process_pdf(uploaded_file, attribution: str, client: OpenAI, model: str) -> dict:
     filename = uploaded_file.name
-    content = extract_pdf_text(uploaded_file) or "(Could not extract PDF text)"
+    content = extract_pdf_text(uploaded_file, max_chars=2000) or "(Could not extract PDF text)"
     attr_ctx = (
         f"This document is being attributed to expert: {attribution}. "
         "Focus your distillation on insights relevant to their known positions."
@@ -357,15 +389,8 @@ def process_pdf(uploaded_file, attribution: str, client: OpenAI, model: str) -> 
         else "This is independent research not attributed to a specific expert."
     )
     prompt = PROCESS_PDF_PROMPT.format(filename=filename, content=content, attribution=attr_ctx)
-    response = client.chat.completions.create(
-        model=model,
-        max_tokens=500,
-        messages=[
-            {"role": "system", "content": "Return only valid JSON."},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    result = _parse_json(response.choices[0].message.content)
+    raw = _call_llm_with_retry(client, model, prompt, max_tokens=500)
+    result = _parse_json(raw)
     result["filename"] = filename
     result["source_type"] = "pdf"
     result["date_added"] = str(datetime.date.today())
