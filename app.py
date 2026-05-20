@@ -2,6 +2,7 @@
 
 import json
 import os
+import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -9,12 +10,19 @@ import yaml
 from dotenv import load_dotenv
 from openai import OpenAI
 
+try:
+    import requests
+    from bs4 import BeautifulSoup
+    FETCH_AVAILABLE = True
+except ImportError:
+    FETCH_AVAILABLE = False
+
 from agents.orchestrator import DebateOrchestrator
 from utils.obsidian import save_to_obsidian
 
 load_dotenv()
 
-# ── Provider config ───────────────────────────────────────────────────────────
+# ── Provider config ────────────────────────────────────────────────────────────
 PROVIDERS = {
     "Ollama (Local — no key needed)": {
         "base_url": "http://localhost:11434/v1",
@@ -46,7 +54,82 @@ PROVIDERS = {
     },
 }
 
-# ── Page config ───────────────────────────────────────────────────────────────
+# ── Expert tags ────────────────────────────────────────────────────────────────
+DEFAULT_TAGS = {
+    "Pieter Abbeel": ["Foundation Models", "Imitation Learning", "Manipulation", "LLMs"],
+    "Rodney Brooks": ["Embodied Intelligence", "Timeline Skepticism", "Dexterity"],
+    "Ken Goldberg": ["Human-Robot Collaboration", "Uncertainty", "Surgical Robotics"],
+    "Gill Pratt": ["Amplification", "Safety", "Automotive", "Demographics"],
+    "Fei-Fei Li": ["Spatial Intelligence", "Computer Vision", "World Models"],
+    "Andrej Karpathy": ["Software 2.0", "LLMs", "Autonomous Vehicles", "Synthetic Data"],
+    "Vinod Khosla": ["VC", "Labor Disruption", "AGI", "Healthcare"],
+    "Josh Wolfe (Lux Capital)": ["VC", "Deep Tech", "Hard Tech", "Physical Intelligence"],
+    "General Catalyst (Teresa Carlson)": ["VC", "Industrial", "Cobots", "Enterprise"],
+    "Wang Xingxing": ["Hardware", "Manufacturing", "China", "Humanoids"],
+    "He Xiaopeng": ["EV-Robotics", "China", "Humanoids", "Autonomous Vehicles"],
+    "Dario Amodei": ["AI Safety", "AGI", "Frontier AI", "Physical AI"],
+}
+
+
+def get_tags(persona: dict) -> list:
+    return persona.get("tags") or DEFAULT_TAGS.get(persona["name"], [])
+
+
+# ── Completeness score ─────────────────────────────────────────────────────────
+def completeness_score(persona: dict) -> int:
+    """
+    Score 0–100 reflecting how much enriched data the persona has.
+    Breakdown: identity 20 | thesis 15 | positions 20 | skeptical 10
+               style 10 | articles-with-urls 15 | data_sources bonus 10
+    """
+    score = 0
+    if persona.get("title"):
+        score += 10
+    if persona.get("affiliation"):
+        score += 10
+    thesis = persona.get("core_thesis", "")
+    if len(thesis) > 100:
+        score += 15
+    elif thesis:
+        score += 7
+    positions = persona.get("known_positions", [])
+    score += min(20, len(positions) * 5)
+    skeptical = persona.get("skeptical_of", [])
+    score += min(10, len(skeptical) * 5)
+    style = persona.get("rhetorical_style", "")
+    if len(style) > 50:
+        score += 10
+    elif style:
+        score += 5
+    articles_with_urls = [
+        a for a in persona.get("seminal_articles", []) if a.get("url")
+    ]
+    score += min(15, len(articles_with_urls) * 4)
+    data_sources = persona.get("data_sources", [])
+    score += min(10, len(data_sources) * 3)
+    return min(100, score)
+
+
+def score_label(score: int) -> str:
+    if score >= 80:
+        return "High"
+    if score >= 50:
+        return "Medium"
+    return "Low"
+
+
+def render_tag_pills(tags: list) -> str:
+    pills = []
+    for t in tags:
+        pills.append(
+            f'<span style="background:#1e3a5f;color:#7dd3fc;padding:2px 9px;'
+            f'border-radius:12px;font-size:0.78em;margin:2px 3px 2px 0;'
+            f'display:inline-block;white-space:nowrap">{t}</span>'
+        )
+    return "".join(pills)
+
+
+# ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Robotics Expert Debate",
     page_icon="🤖",
@@ -62,7 +145,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── Data loading ──────────────────────────────────────────────────────────────
+# ── Data loading ───────────────────────────────────────────────────────────────
 @st.cache_data
 def load_personas() -> dict:
     return {
@@ -79,7 +162,21 @@ def load_debates() -> dict:
     }
 
 
-# ── Expert research via LLM ───────────────────────────────────────────────────
+@st.cache_data
+def load_research() -> list:
+    research_dir = Path("research")
+    if not research_dir.exists():
+        return []
+    items = []
+    for f in sorted(research_dir.glob("*.yaml"), reverse=True):
+        try:
+            items.append(yaml.safe_load(f.read_text()))
+        except Exception:
+            pass
+    return items
+
+
+# ── LLM prompts ────────────────────────────────────────────────────────────────
 TOPIC_PROMPT = """You are designing a structured debate for robotics researchers, investors, and executives.
 
 The user wants to debate: "{title}"
@@ -130,6 +227,33 @@ Rules:
 - Keep core_thesis and rhetorical_style concise.
 - Return only the JSON object, no other text."""
 
+PROCESS_URL_PROMPT = """You are extracting structured knowledge from a web article for a robotics research knowledge base.
+
+URL: {url}
+Content (excerpt):
+{content}
+
+{attribution}
+
+Return a JSON object with exactly these fields:
+{{
+  "title": "A short descriptive title for this piece (under 12 words)",
+  "key_insights": "2-4 sentences capturing what matters most here for robotics research or investment thesis building",
+  "tags": ["2-5 tags — choose from: Foundation Models, Humanoids, Hardware, Software, China, VC Funding, Commercial Timeline, Dexterity, Autonomous Vehicles, LLMs, AI Safety, Labor, Manufacturing, Policy, Spatial Intelligence, Simulation"]
+}}
+
+Return only valid JSON, no markdown, no other text."""
+
+
+# ── LLM helpers ───────────────────────────────────────────────────────────────
+def _parse_json(raw: str) -> dict:
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    return json.loads(raw.strip())
+
 
 def research_topic(title: str, client: OpenAI, model: str) -> dict:
     prompt = TOPIC_PROMPT.format(title=title)
@@ -141,20 +265,7 @@ def research_topic(title: str, client: OpenAI, model: str) -> dict:
             {"role": "user", "content": prompt},
         ],
     )
-    raw = response.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
-
-
-def save_debate_yaml(debate: dict) -> Path:
-    safe_name = debate["topic"].lower().replace(" ", "_").replace("?", "").replace(":", "").replace("/", "_")[:50]
-    path = Path("debates") / f"{safe_name}.yaml"
-    path.write_text(yaml.dump(debate, allow_unicode=True, default_flow_style=False, sort_keys=False, width=100))
-    load_debates.clear()
-    return path
+    return _parse_json(response.choices[0].message.content)
 
 
 def research_expert(name: str, affiliation: str, client: OpenAI, model: str) -> dict:
@@ -167,25 +278,88 @@ def research_expert(name: str, affiliation: str, client: OpenAI, model: str) -> 
             {"role": "user", "content": prompt},
         ],
     )
-    raw = response.choices[0].message.content.strip()
-    # Strip markdown code fences if present
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    return _parse_json(response.choices[0].message.content)
+
+
+def fetch_url_text(url: str) -> str:
+    if not FETCH_AVAILABLE:
+        return ""
+    try:
+        resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        return soup.get_text(separator="\n", strip=True)[:4000]
+    except Exception:
+        return ""
+
+
+def process_url(url: str, attribution: str, client: OpenAI, model: str) -> dict:
+    content = fetch_url_text(url) or "(Could not fetch content — analysing URL and context only)"
+    attr_ctx = (
+        f"This article is being attributed to expert: {attribution}. "
+        "Focus your extraction on insights relevant to their known positions."
+        if attribution != "Independent Research"
+        else "This is independent research not attributed to a specific expert."
+    )
+    prompt = PROCESS_URL_PROMPT.format(url=url, content=content, attribution=attr_ctx)
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=400,
+        messages=[
+            {"role": "system", "content": "Return only valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    result = _parse_json(response.choices[0].message.content)
+    result["url"] = url
+    result["date_added"] = str(datetime.date.today())
+    result["attribution"] = attribution
+    return result
+
+
+# ── Persistence helpers ────────────────────────────────────────────────────────
+def save_debate_yaml(debate: dict) -> Path:
+    safe = debate["topic"].lower().replace(" ", "_").replace("?", "").replace(":", "").replace("/", "_")[:50]
+    path = Path("debates") / f"{safe}.yaml"
+    path.write_text(yaml.dump(debate, allow_unicode=True, default_flow_style=False, sort_keys=False, width=100))
+    load_debates.clear()
+    return path
 
 
 def save_persona_yaml(persona: dict) -> Path:
-    """Save a persona dict as a YAML file in personas/ and clear the cache."""
-    safe_name = persona["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
-    path = Path("personas") / f"{safe_name}.yaml"
+    safe = persona["name"].lower().replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
+    path = Path("personas") / f"{safe}.yaml"
     path.write_text(yaml.dump(persona, allow_unicode=True, default_flow_style=False, sort_keys=False, width=100))
     load_personas.clear()
     return path
 
 
-# ── Session state ─────────────────────────────────────────────────────────────
+def save_source_to_persona(persona_name: str, source: dict, all_personas: dict) -> None:
+    persona = dict(all_personas[persona_name])
+    sources = list(persona.get("data_sources", []))
+    sources.append({
+        "url": source["url"],
+        "title": source.get("title", source["url"]),
+        "date_added": source.get("date_added", str(datetime.date.today())),
+        "key_insights": source.get("key_insights", ""),
+        "tags": source.get("tags", []),
+    })
+    persona["data_sources"] = sources
+    save_persona_yaml(persona)
+
+
+def save_independent_research(source: dict) -> Path:
+    Path("research").mkdir(exist_ok=True)
+    slug = source.get("title", source["url"])[:40].lower().replace(" ", "_").replace("?", "")
+    filename = f"{source.get('date_added', str(datetime.date.today()))}_{slug}.yaml"
+    path = Path("research") / filename
+    path.write_text(yaml.dump(source, allow_unicode=True, default_flow_style=False, sort_keys=False))
+    load_research.clear()
+    return path
+
+
+# ── Session state ──────────────────────────────────────────────────────────────
 for key, default in [
     ("debate_history", []),
     ("debate_complete", False),
@@ -195,15 +369,15 @@ for key, default in [
     ("custom_debates", {}),
     ("researched_expert", None),
     ("researched_topic", None),
+    ("processed_sources", []),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
 
-# Merge loaded + custom (reload after any permanent saves)
 personas = {**load_personas(), **st.session_state.custom_personas}
 debates = {**load_debates(), **st.session_state.custom_debates}
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("⚙️ Configure Debate")
 
@@ -234,14 +408,12 @@ with st.sidebar:
             options=["This session only", "Save permanently (adds to repo)"],
             key="ct_save",
         )
-
         topic_research_btn = st.button(
             "🔍 Research & Preview",
             key="topic_research_btn",
             disabled=not ct_name,
             use_container_width=True,
         )
-
         if topic_research_btn and ct_name:
             with st.spinner(f'Generating debate for "{ct_name}"…'):
                 try:
@@ -280,7 +452,9 @@ with st.sidebar:
     with st.expander("🗑️ Delete a topic"):
         all_topic_names = list(debates.keys())
         topic_to_delete = st.selectbox("Select topic to delete", options=all_topic_names, key="topic_to_delete")
-        is_permanent = topic_to_delete and (Path("debates") / f"{topic_to_delete.lower().replace(' ', '_').replace('?','').replace(':','').replace('/','_')[:50]}.yaml").exists()
+        is_permanent = topic_to_delete and (
+            Path("debates") / f"{topic_to_delete.lower().replace(' ', '_').replace('?','').replace(':','').replace('/','_')[:50]}.yaml"
+        ).exists()
         if is_permanent:
             st.caption("⚠️ This will delete the YAML file permanently.")
         if st.button("Delete topic", key="delete_topic_btn", disabled=not topic_to_delete, use_container_width=True):
@@ -313,13 +487,11 @@ with st.sidebar:
             options=["This session only", "Save permanently (adds to repo)"],
             key="ce_save",
         )
-
         research_btn = st.button(
             "🔍 Research & Preview",
             disabled=not (ce_name and api_key),
             use_container_width=True,
         )
-
         if research_btn and ce_name:
             with st.spinner(f"Researching {ce_name}…"):
                 try:
@@ -331,7 +503,6 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Research failed: {e}")
 
-        # Show preview + confirm
         if st.session_state.researched_expert:
             r = st.session_state.researched_expert
             st.markdown(f"**{r['name']}** — {r.get('title', '')}")
@@ -356,7 +527,7 @@ with st.sidebar:
                         saved_path = save_persona_yaml(persona)
                         st.success(f"Saved to {saved_path.name}")
                     else:
-                        st.success(f"Added for this session.")
+                        st.success("Added for this session.")
                     st.session_state.researched_expert = None
                     st.rerun()
             with col2:
@@ -383,22 +554,215 @@ with st.sidebar:
     if provider["requires_key"] and not api_key:
         st.caption("Add an API key above.")
 
+
 # ── Main area ─────────────────────────────────────────────────────────────────
 st.title("🤖 Robotics Expert Debate")
-if selected_topic:
-    st.subheader(selected_topic)
 
-if not st.session_state.debate_complete and not run_btn and selected_names:
-    st.markdown("#### Participating Experts")
-    cols = st.columns(min(len(selected_names), 3))
-    for i, name in enumerate(selected_names):
-        p = personas[name]
+tab_debate, tab_experts, tab_data = st.tabs(["🎙️ Debate", "👥 Experts & Knowledge", "📥 Data Dump"])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1 — DEBATE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_debate:
+    if selected_topic:
+        st.subheader(selected_topic)
+
+    # Expert cards shown before a debate starts
+    if not st.session_state.debate_complete and not run_btn and selected_names:
+        st.markdown("#### Participating Experts")
+        cols = st.columns(min(len(selected_names), 3))
+        for i, name in enumerate(selected_names):
+            p = personas[name]
+            score = completeness_score(p)
+            tags = get_tags(p)
+            with cols[i % 3]:
+                with st.container(border=True):
+                    st.markdown(f"**{name}**")
+                    st.caption(f"{p.get('title', '')} · {p.get('affiliation', '')}")
+                    if tags:
+                        st.markdown(render_tag_pills(tags), unsafe_allow_html=True)
+                        st.write("")
+                    st.markdown(f"_{p['core_thesis'][:120].rstrip()}…_")
+                    label = score_label(score)
+                    st.caption(f"Data completeness: **{label}** ({score}/100)")
+                    st.progress(score / 100)
+                    articles = p.get("seminal_articles", [])
+                    if articles:
+                        with st.expander("Seminal articles"):
+                            for a in articles:
+                                if a.get("url"):
+                                    st.markdown(f"[{a['title']}]({a['url']})")
+                                else:
+                                    st.markdown(f"• {a['title']}")
+
+    # ── Run debate ────────────────────────────────────────────────────────────
+    def make_client(key: str, base_url: str) -> OpenAI:
+        return OpenAI(api_key=key, base_url=base_url)
+
+    if run_btn and not run_disabled:
+        st.session_state.debate_history = []
+        st.session_state.debate_complete = False
+        st.session_state.debate_topic = selected_topic
+        st.session_state.debate_experts = selected_names
+
+        client = make_client(api_key, provider["base_url"])
+        orchestrator = DebateOrchestrator(
+            personas=[personas[n] for n in selected_names],
+            debate=debates[selected_topic],
+            client=client,
+            model=model_choice,
+            num_rounds=num_rounds,
+        )
+
+        for exchange in orchestrator.run():
+            role = exchange.get("role", "expert")
+            st.session_state.debate_history.append(exchange)
+
+            if role == "round_header":
+                st.markdown(
+                    f"<div class='round-header'>{exchange['speaker']}</div>",
+                    unsafe_allow_html=True,
+                )
+                continue
+
+            avatar = "🎙️" if "Moderator" in exchange["speaker"] else "💬"
+            with st.chat_message(exchange["speaker"], avatar=avatar):
+                st.markdown(f"**{exchange['speaker']}**")
+                if exchange["content"]:
+                    st.write(exchange["content"])
+                for a in exchange.get("articles", []):
+                    if a.get("url"):
+                        st.markdown(f"[{a['title']}]({a['url']})")
+
+        st.session_state.debate_complete = True
+        st.success("Debate complete.")
+
+    elif st.session_state.debate_complete and st.session_state.debate_history:
+        for exchange in st.session_state.debate_history:
+            role = exchange.get("role", "expert")
+            if role == "round_header":
+                st.markdown(
+                    f"<div class='round-header'>{exchange['speaker']}</div>",
+                    unsafe_allow_html=True,
+                )
+                continue
+            avatar = "🎙️" if "Moderator" in exchange["speaker"] else "💬"
+            with st.chat_message(exchange["speaker"], avatar=avatar):
+                st.markdown(f"**{exchange['speaker']}**")
+                if exchange["content"]:
+                    st.write(exchange["content"])
+                for a in exchange.get("articles", []):
+                    if a.get("url"):
+                        st.markdown(f"[{a['title']}]({a['url']})")
+
+    # ── Save to Obsidian ──────────────────────────────────────────────────────
+    if st.session_state.debate_complete and st.session_state.debate_history:
+        st.divider()
+        st.subheader("💾 Save to Obsidian")
+
+        saveable = [
+            e for e in st.session_state.debate_history
+            if e.get("role") != "round_header" and e.get("content")
+        ]
+
+        with st.form("save_form"):
+            st.markdown("Select exchanges to include in the note:")
+            selected_indices = []
+            for i, exchange in enumerate(saveable):
+                preview = exchange["content"][:90].replace("\n", " ")
+                if st.checkbox(f"**{exchange['speaker']}** — {preview}…", value=True, key=f"chk_{i}"):
+                    selected_indices.append(i)
+
+            vault_path = st.text_input(
+                "Obsidian vault path",
+                value=os.getenv(
+                    "OBSIDIAN_VAULT_PATH",
+                    "/Users/aarzoosharma/Documents/Market Research Agents",
+                ),
+            )
+            submitted = st.form_submit_button("Save selected to Obsidian")
+
+        if submitted:
+            to_save = [saveable[i] for i in selected_indices]
+            if not to_save:
+                st.warning("Select at least one exchange to save.")
+            elif not vault_path:
+                st.warning("Enter the path to your Obsidian vault.")
+            else:
+                try:
+                    path = save_to_obsidian(
+                        topic=st.session_state.debate_topic,
+                        experts=st.session_state.debate_experts,
+                        exchanges=to_save,
+                        vault_path=vault_path,
+                    )
+                    st.success(f"Saved → `{path}`")
+                except Exception as e:
+                    st.error(f"Save failed: {e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2 — EXPERTS & KNOWLEDGE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_experts:
+    st.subheader("Expert Profiles")
+
+    # Collect all tags in use
+    all_used_tags = sorted({t for p in personas.values() for t in get_tags(p)})
+    filter_tags = st.multiselect(
+        "Filter by expertise area",
+        options=all_used_tags,
+        placeholder="Show all",
+    )
+
+    filtered = {
+        name: p for name, p in personas.items()
+        if not filter_tags or any(t in get_tags(p) for t in filter_tags)
+    }
+    st.caption(f"Showing {len(filtered)} of {len(personas)} experts")
+
+    cols = st.columns(3)
+    for i, (name, p) in enumerate(filtered.items()):
+        score = completeness_score(p)
+        label = score_label(score)
+        tags = get_tags(p)
+        data_sources = p.get("data_sources", [])
+        articles = p.get("seminal_articles", [])
+
         with cols[i % 3]:
             with st.container(border=True):
                 st.markdown(f"**{name}**")
                 st.caption(f"{p.get('title', '')} · {p.get('affiliation', '')}")
-                st.markdown(f"_{p['core_thesis'][:120].rstrip()}…_")
-                articles = p.get("seminal_articles", [])
+
+                if tags:
+                    st.markdown(render_tag_pills(tags), unsafe_allow_html=True)
+                    st.write("")
+
+                # Completeness score
+                st.caption(f"Data completeness: **{label}** — {score}/100")
+                st.progress(score / 100)
+
+                with st.expander("Core thesis & positions"):
+                    st.markdown(p.get("core_thesis", "—"))
+                    if p.get("known_positions"):
+                        st.markdown("**Known positions:**")
+                        for pos in p["known_positions"]:
+                            st.markdown(f"• {pos}")
+                    if p.get("skeptical_of"):
+                        st.markdown("**Skeptical of:**")
+                        for s in p["skeptical_of"]:
+                            st.markdown(f"• {s}")
+
+                if data_sources:
+                    with st.expander(f"📎 Data sources ({len(data_sources)})"):
+                        for ds in data_sources:
+                            st.markdown(f"[{ds.get('title', ds['url'])}]({ds['url']})")
+                            st.caption(ds.get("key_insights", "")[:150])
+                            if ds.get("tags"):
+                                st.markdown(render_tag_pills(ds["tags"]), unsafe_allow_html=True)
+                            st.write("")
+
                 if articles:
                     with st.expander("Seminal articles"):
                         for a in articles:
@@ -407,108 +771,114 @@ if not st.session_state.debate_complete and not run_btn and selected_names:
                             else:
                                 st.markdown(f"• {a['title']}")
 
-# ── Run debate ────────────────────────────────────────────────────────────────
-def make_client(api_key: str, base_url: str) -> OpenAI:
-    return OpenAI(api_key=api_key, base_url=base_url)
+    # Independent research section
+    research_items = load_research()
+    if research_items:
+        st.divider()
+        st.subheader("Independent Research")
+        ri_cols = st.columns(3)
+        for j, item in enumerate(research_items):
+            with ri_cols[j % 3]:
+                with st.container(border=True):
+                    title = item.get("title", item.get("url", "Untitled"))
+                    if item.get("url"):
+                        st.markdown(f"**[{title}]({item['url']})**")
+                    else:
+                        st.markdown(f"**{title}**")
+                    st.caption(f"Added {item.get('date_added', '')}")
+                    if item.get("tags"):
+                        st.markdown(render_tag_pills(item["tags"]), unsafe_allow_html=True)
+                        st.write("")
+                    st.markdown(item.get("key_insights", ""))
 
 
-if run_btn and not run_disabled:
-    st.session_state.debate_history = []
-    st.session_state.debate_complete = False
-    st.session_state.debate_topic = selected_topic
-    st.session_state.debate_experts = selected_names
-
-    client = make_client(api_key, provider["base_url"])
-    orchestrator = DebateOrchestrator(
-        personas=[personas[n] for n in selected_names],
-        debate=debates[selected_topic],
-        client=client,
-        model=model_choice,
-        num_rounds=num_rounds,
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3 — DATA DUMP
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_data:
+    st.subheader("Data Dump — Enrich the Knowledge Base")
+    st.markdown(
+        "Paste article, interview, or paper URLs below. "
+        "The app fetches and analyses each one, then stores the extracted insights "
+        "under a specific expert or as standalone research."
     )
 
-    for exchange in orchestrator.run():
-        role = exchange.get("role", "expert")
-        st.session_state.debate_history.append(exchange)
-
-        if role == "round_header":
-            st.markdown(
-                f"<div class='round-header'>{exchange['speaker']}</div>",
-                unsafe_allow_html=True,
-            )
-            continue
-
-        avatar = "🎙️" if "Moderator" in exchange["speaker"] else "💬"
-        with st.chat_message(exchange["speaker"], avatar=avatar):
-            st.markdown(f"**{exchange['speaker']}**")
-            if exchange["content"]:
-                st.write(exchange["content"])
-            for a in exchange.get("articles", []):
-                if a.get("url"):
-                    st.markdown(f"[{a['title']}]({a['url']})")
-
-    st.session_state.debate_complete = True
-    st.success("Debate complete.")
-
-elif st.session_state.debate_complete and st.session_state.debate_history:
-    for exchange in st.session_state.debate_history:
-        role = exchange.get("role", "expert")
-        if role == "round_header":
-            st.markdown(
-                f"<div class='round-header'>{exchange['speaker']}</div>",
-                unsafe_allow_html=True,
-            )
-            continue
-        avatar = "🎙️" if "Moderator" in exchange["speaker"] else "💬"
-        with st.chat_message(exchange["speaker"], avatar=avatar):
-            st.markdown(f"**{exchange['speaker']}**")
-            if exchange["content"]:
-                st.write(exchange["content"])
-            for a in exchange.get("articles", []):
-                if a.get("url"):
-                    st.markdown(f"[{a['title']}]({a['url']})")
-
-# ── Save to Obsidian ──────────────────────────────────────────────────────────
-if st.session_state.debate_complete and st.session_state.debate_history:
-    st.divider()
-    st.subheader("💾 Save to Obsidian")
-
-    saveable = [
-        e for e in st.session_state.debate_history
-        if e.get("role") != "round_header" and e.get("content")
-    ]
-
-    with st.form("save_form"):
-        st.markdown("Select exchanges to include in the note:")
-        selected_indices = []
-        for i, exchange in enumerate(saveable):
-            preview = exchange["content"][:90].replace("\n", " ")
-            if st.checkbox(f"**{exchange['speaker']}** — {preview}…", value=True, key=f"chk_{i}"):
-                selected_indices.append(i)
-
-        vault_path = st.text_input(
-            "Obsidian vault path",
-            value=os.getenv(
-                "OBSIDIAN_VAULT_PATH",
-                "/Users/aarzoosharma/Documents/Market Research Agents",
-            ),
+    if not FETCH_AVAILABLE:
+        st.info(
+            "**Tip:** Install `requests` and `beautifulsoup4` for full URL fetching: "
+            "`pip install requests beautifulsoup4` — the app will still work without "
+            "them, but the LLM will only see the URL, not the page text."
         )
-        submitted = st.form_submit_button("Save selected to Obsidian")
 
-    if submitted:
-        to_save = [saveable[i] for i in selected_indices]
-        if not to_save:
-            st.warning("Select at least one exchange to save.")
-        elif not vault_path:
-            st.warning("Enter the path to your Obsidian vault.")
+    with st.form("data_dump_form"):
+        urls_input = st.text_area(
+            "URLs (one per line)",
+            placeholder="https://...\nhttps://...",
+            height=130,
+        )
+        attribution = st.selectbox(
+            "Classify under",
+            options=["Independent Research"] + list(personas.keys()),
+            help="Attribute to a specific expert or file as independent research.",
+        )
+        process_btn = st.form_submit_button(
+            "🔍 Fetch & Analyse",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if process_btn:
+        urls = [u.strip() for u in urls_input.strip().splitlines() if u.strip()]
+        if not urls:
+            st.warning("Paste at least one URL.")
+        elif provider["requires_key"] and not api_key:
+            st.warning("Add an API key in the sidebar first.")
         else:
-            try:
-                path = save_to_obsidian(
-                    topic=st.session_state.debate_topic,
-                    experts=st.session_state.debate_experts,
-                    exchanges=to_save,
-                    vault_path=vault_path,
-                )
-                st.success(f"Saved → `{path}`")
-            except Exception as e:
-                st.error(f"Save failed: {e}")
+            client_d = OpenAI(api_key=api_key, base_url=provider["base_url"])
+            new_sources = []
+            for url in urls:
+                with st.spinner(f"Processing {url[:70]}…"):
+                    try:
+                        result = process_url(url, attribution, client_d, model_choice)
+                        new_sources.append(result)
+                    except Exception as e:
+                        st.error(f"Failed on {url}: {e}")
+            st.session_state.processed_sources = new_sources
+
+    if st.session_state.processed_sources:
+        st.markdown("---")
+        st.markdown("#### Extracted Insights — Review before saving")
+
+        for src in st.session_state.processed_sources:
+            with st.container(border=True):
+                attr_display = src.get("attribution", "Independent Research")
+                st.markdown(f"**{src.get('title', src['url'])}**")
+                st.caption(f"Attribution: {attr_display} · {src.get('date_added', '')}")
+                st.markdown(f"[{src['url']}]({src['url']})")
+                st.markdown(src.get("key_insights", ""))
+                if src.get("tags"):
+                    st.markdown(render_tag_pills(src["tags"]), unsafe_allow_html=True)
+
+        st.write("")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save all to knowledge base", type="primary", use_container_width=True):
+                saved = 0
+                for src in st.session_state.processed_sources:
+                    attr = src.get("attribution", "Independent Research")
+                    try:
+                        if attr != "Independent Research" and attr in personas:
+                            save_source_to_persona(attr, src, personas)
+                        else:
+                            save_independent_research(src)
+                        saved += 1
+                    except Exception as e:
+                        st.error(f"Could not save {src.get('url', '')}: {e}")
+                if saved:
+                    st.success(f"Saved {saved} source(s). Switch to the Experts tab to see them.")
+                st.session_state.processed_sources = []
+                st.rerun()
+        with col2:
+            if st.button("✗ Discard all", use_container_width=True):
+                st.session_state.processed_sources = []
+                st.rerun()
