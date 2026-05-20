@@ -25,6 +25,7 @@ try:
 except ImportError:
     PDF_AVAILABLE = False
 
+from agents.fact_checker import FactCheckerAgent
 from agents.orchestrator import DebateOrchestrator
 from utils.obsidian import save_to_obsidian
 
@@ -453,6 +454,24 @@ def save_source_to_persona(persona_name: str, source: dict, all_personas: dict) 
     save_persona_yaml(persona)
 
 
+def build_research_corpus(all_personas: dict) -> list[dict]:
+    """All independent research files + every expert's data_sources, deduplicated by url/filename."""
+    seen: set[str] = set()
+    corpus: list[dict] = []
+    for item in load_research():
+        key = item.get("url") or item.get("filename") or item.get("title", "")
+        if key and key not in seen:
+            seen.add(key)
+            corpus.append(item)
+    for persona in all_personas.values():
+        for ds in persona.get("data_sources", []):
+            key = ds.get("url") or ds.get("filename") or ds.get("title", "")
+            if key and key not in seen:
+                seen.add(key)
+                corpus.append(ds)
+    return corpus
+
+
 def save_independent_research(source: dict) -> Path:
     Path("research").mkdir(exist_ok=True)
     slug = source.get("title", source["url"])[:40].lower().replace(" ", "_").replace("?", "")
@@ -474,6 +493,7 @@ for key, default in [
     ("researched_expert", None),
     ("researched_topic", None),
     ("processed_sources", []),
+    ("validations", {}),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -709,6 +729,7 @@ with tab_debate:
         st.session_state.debate_complete = False
         st.session_state.debate_topic = selected_topic
         st.session_state.debate_experts = selected_names
+        st.session_state.validations = {}
 
         client = make_client(api_key, provider["base_url"])
         orchestrator = DebateOrchestrator(
@@ -743,7 +764,7 @@ with tab_debate:
         st.success("Debate complete.")
 
     elif st.session_state.debate_complete and st.session_state.debate_history:
-        for exchange in st.session_state.debate_history:
+        for idx, exchange in enumerate(st.session_state.debate_history):
             role = exchange.get("role", "expert")
             if role == "round_header":
                 st.markdown(
@@ -759,6 +780,77 @@ with tab_debate:
                 for a in exchange.get("articles", []):
                     if a.get("url"):
                         st.markdown(f"[{a['title']}]({a['url']})")
+                # Inline validation annotations
+                if role == "expert":
+                    vlist = st.session_state.validations.get(idx, [])
+                    if vlist:
+                        with st.expander(f"🔎 {len(vlist)} source match(es) from research"):
+                            for v in vlist:
+                                icon = {"SUPPORTS": "✅", "CONTRADICTS": "⚠️", "CONTEXT": "📎"}.get(v.get("verdict", ""), "•")
+                                title = v.get("source_title", "Source")
+                                ref = v.get("source_ref", "")
+                                verdict = v.get("verdict", "")
+                                if ref and ref.startswith("http"):
+                                    link = f"[{title}]({ref})"
+                                elif ref:
+                                    link = f"**{title}** _(PDF)_"
+                                else:
+                                    link = f"**{title}**"
+                                st.markdown(f"{icon} **{verdict}** — {link}")
+                                if v.get("claim"):
+                                    st.caption(f"Claim: _{v['claim']}_")
+                                if v.get("explanation"):
+                                    st.caption(v["explanation"])
+
+    # ── Validate claims against research ─────────────────────────────────────
+    if st.session_state.debate_complete and st.session_state.debate_history:
+        corpus = build_research_corpus(personas)
+        st.divider()
+        if corpus:
+            n_expert = sum(
+                1 for e in st.session_state.debate_history if e.get("role") == "expert"
+            )
+            already_run = bool(st.session_state.validations)
+            label = (
+                f"🔄 Re-validate {n_expert} statements against {len(corpus)} source(s)"
+                if already_run
+                else f"🔎 Validate claims against {len(corpus)} research source(s)"
+            )
+            if st.button(label, use_container_width=True):
+                checker = FactCheckerAgent(
+                    corpus, make_client(api_key, provider["base_url"]), model_choice
+                )
+                new_validations: dict = {}
+                expert_exchanges = [
+                    (i, e)
+                    for i, e in enumerate(st.session_state.debate_history)
+                    if e.get("role") == "expert"
+                ]
+                prog = st.progress(0.0, text="Checking sources…")
+                for step, (i, exchange) in enumerate(expert_exchanges):
+                    prog.progress(
+                        (step + 1) / len(expert_exchanges),
+                        text=f"Checking {exchange['speaker']}…",
+                    )
+                    results = checker.validate(exchange["speaker"], exchange["content"])
+                    if results:
+                        new_validations[i] = results
+                prog.empty()
+                st.session_state.validations = new_validations
+                n_found = sum(len(v) for v in new_validations.values())
+                if n_found:
+                    st.success(
+                        f"Found {n_found} reference(s) across "
+                        f"{len(new_validations)} statement(s). Scroll up to see annotations."
+                    )
+                else:
+                    st.info("No direct matches between expert claims and research sources.")
+                st.rerun()
+        else:
+            st.caption(
+                "💡 No research sources yet — add articles or PDFs via the **Data Dump** tab "
+                "to enable claim validation."
+            )
 
     # ── Save to Obsidian ──────────────────────────────────────────────────────
     if st.session_state.debate_complete and st.session_state.debate_history:
