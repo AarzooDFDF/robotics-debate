@@ -13,33 +13,30 @@ class ExpertAgent:
 
     def _build_system_prompt(self) -> str:
         p = self.persona
-        positions = "\n".join(f"- {pos}" for pos in p.get("known_positions", []))
-        skepticisms = "\n".join(f"- {s}" for s in p.get("skeptical_of", []))
+        # Truncate each field to keep the system prompt under ~500 tokens
+        positions = "\n".join(f"- {pos[:120]}" for pos in p.get("known_positions", [])[:4])
+        skepticisms = "\n".join(f"- {s[:100]}" for s in p.get("skeptical_of", [])[:2])
         articles = "\n".join(
-            f"- {a['title']}: {a['url']}" for a in p.get("seminal_articles", [])
+            f"- {a['title'][:80]}" for a in p.get("seminal_articles", [])[:2]
         )
-        return f"""You are {p['name']}, {p['title']} at {p['affiliation']}.
+        thesis = (p.get("core_thesis") or "")[:250]
+        style = (p.get("rhetorical_style") or "")[:120]
+        return f"""You are {p['name']}, {p.get('title','')} at {p.get('affiliation','')}.
 
-Your core thesis: {p['core_thesis']}
+Core thesis: {thesis}
 
-Your known positions:
+Known positions:
 {positions}
 
-You are skeptical of:
+Skeptical of:
 {skepticisms}
 
-Your rhetorical style: {p['rhetorical_style']}
+Rhetorical style: {style}
 
-Your key published work and interviews:
-{articles}
+Key work: {articles}
 
-Instructions:
-- Stay strictly in character as {p['name']} throughout the debate.
-- Speak in first person. Reference your actual research, investments, and public statements.
-- Engage directly with what others have said — agree where you genuinely would, push back where your positions diverge.
-- Be specific: cite your own work, data points, and positions rather than speaking in generalities.
-- Keep responses to 150-200 words. This is a debate, not a lecture.
-- Do not break character. Do not mention that you are an AI."""
+Instructions: Stay in character. Speak in first person. Engage with what others said.
+Be specific. Keep responses to 150-200 words. Do not mention you are an AI."""
 
     def respond(self, debate_history: list[dict], question: str) -> str:
         context = self._format_history(debate_history)
@@ -58,7 +55,10 @@ Instructions:
     def _format_history(self, history: list[dict]) -> str:
         if not history:
             return ""
-        lines = ["--- Debate so far ---"]
-        for exchange in history:
-            lines.append(f"{exchange['speaker']}: {exchange['content']}")
+        # Keep only the last 4 substantive exchanges to stay within context limits
+        recent = [e for e in history if e.get("content")][-4:]
+        lines = ["--- Recent debate ---"]
+        for exchange in recent:
+            snippet = (exchange["content"] or "")[:280]
+            lines.append(f"{exchange['speaker']}: {snippet}")
         return "\n\n".join(lines)

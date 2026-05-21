@@ -44,17 +44,18 @@ Write a brief (2-3 sentence) framing of the debate, then pose the opening questi
         return self._call(prompt)
 
     def synthesize_round(self, history: list[dict], round_num: int) -> str:
+        # Use only the most recent expert exchanges (current round) to stay within context
+        expert_exchanges = [e for e in history if e.get("role") == "expert"][-6:]
         transcript = "\n\n".join(
-            f"{e['speaker']}: {e['content']}"
-            for e in history
-            if e.get("role") in ("expert", "moderator_open")
+            f"{e['speaker']}: {(e['content'] or '')[:280]}"
+            for e in expert_exchanges
         )
-        prompt = f"""Round {round_num + 1} of the debate is complete. Here is the transcript:
+        prompt = f"""Round {round_num + 1} transcript:
 
 {transcript}
 
 Identify the 2-3 sharpest points of genuine disagreement. Name the people on each side.
-Be specific — paraphrase what was actually said. Keep to 150 words."""
+Paraphrase what was actually said. Keep to 150 words."""
         return self._call(prompt)
 
     def generate_followup(self, debate: dict, history: list[dict], round_num: int) -> str:
@@ -73,10 +74,16 @@ Write only the question."""
         return self._call(prompt)
 
     def final_synthesis(self, history: list[dict]) -> str:
+        # Sample key exchanges: opening + all syntheses + last 4 expert turns
+        opening = [e for e in history if e.get("role") == "moderator_open"]
+        syntheses = [e for e in history if e.get("role") == "synthesis"]
+        recent_expert = [e for e in history if e.get("role") == "expert"][-4:]
+        sampled = opening + syntheses + recent_expert
         transcript = "\n\n".join(
-            f"{e['speaker']}: {e['content']}" for e in history
+            f"{e['speaker']}: {(e['content'] or '')[:250]}"
+            for e in sampled
         )
-        prompt = f"""The debate is over. Here is the full transcript:
+        prompt = f"""The debate is over. Key exchanges:
 
 {transcript}
 
