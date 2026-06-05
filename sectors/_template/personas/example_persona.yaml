@@ -1,0 +1,21 @@
+name: Full Name
+title: Their Title
+affiliation: Their Organization
+core_thesis: >
+  2-3 sentence thesis — the claim they'd stake their reputation on.
+  What do they believe that most people in the field would disagree with?
+known_positions:
+  - Concrete, sourced position with date and context
+  - Another position (quote a paper, interview, or public statement)
+  - A third position
+skeptical_of:
+  - Thing they consistently push back on (be specific, not generic)
+  - Another skepticism
+rhetorical_style: >
+  How they argue — methodical empiricist, polemical, data-first, narrative-driven, etc.
+  Include signature phrases or approaches if known.
+seminal_articles:
+  - title: "Article or Paper Title"
+    url: https://link-to-source
+  - title: "Second Key Work"
+    url: https://link-to-source

@@ -1,0 +1,22 @@
+topic: "China vs. US: Who Wins the Robotics Race?"
+description: >
+  China has state backing, vertical manufacturing integration, EV supply chains
+  repurposed for robots, and companies already shipping units. The US has frontier
+  AI research, open ecosystems, and deep-tech VC. This is the geopolitical frame
+  that every robotics investor is now being asked about.
+opening_question: >
+  China has the manufacturing scale, government support, and vertically integrated
+  supply chains from EVs that translate directly to robot production. The US has
+  the frontier AI research and capital markets. Which structural advantage matters
+  more, and who wins the robotics race over the next decade?
+follow_up_prompts:
+  - >
+    Unitree is selling humanoids at roughly $16,000 — a fraction of what Figure
+    or 1X cost. He Xiaopeng is targeting mass production by end of 2026. If China
+    commoditizes the hardware the way it did with EVs and solar panels, what is
+    the US competitive advantage in robotics?
+  - >
+    Josh Wolfe and others argue that open AI research ecosystems (Hugging Face,
+    open-source foundation models) are a structural US advantage. Wang Xingxing
+    argues China's manufacturing integration is more decisive. Which moat is
+    deeper and more durable in robotics specifically?

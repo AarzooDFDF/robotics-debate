@@ -1,0 +1,10 @@
+title: 'The State of the Robotics Ecosystem (Insight Partners)'
+key_insights: Foundation models advancing from VLMs to VLAs (vision-language-action); hardware costs collapsing (Unitree R1 humanoid now $5,900); strategic divide between generalist foundation model companies and vertical RaaS specialists. Key commercial traction in hazardous/inaccessible environments — cleaning, inspection, maintenance, heavy machinery. Enterprise deployment maturity: early reliability 40%, mature systems 85%. Business model shift from CapEx sales to usage-based RaaS. Data scarcity remains the core bottleneck — even full global teleoperation population would take years to reach 100 trillion trajectories. Vertical specialists capturing exclusive datasets and switching costs via deep workflow integration.
+tags:
+- Foundation Models
+- Hardware
+- Labor
+- Investment Frameworks
+url: https://www.insightpartners.com/ideas/the-state-of-the-robotics-ecosystem/
+date_added: '2026-05-21'
+attribution: Independent Research

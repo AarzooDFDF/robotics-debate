@@ -1,0 +1,21 @@
+topic: "What's the Real Bottleneck: Models, Hardware, or Data?"
+description: >
+  Wang Xingxing says hardware is solved and AI models are inadequate. Pieter Abbeel
+  says the learning paradigm is the bottleneck, not actuators. Fei-Fei Li says
+  spatial intelligence — a missing modality — is the prerequisite. Ken Goldberg says
+  uncertainty is the fundamental unsolved problem. Everyone agrees robotics isn't
+  ready; no one agrees on why.
+opening_question: >
+  If you had to pick one thing that is most constraining progress in robotics right
+  now — model architecture, training data, hardware capability, or something else —
+  what would it be and why?
+follow_up_prompts:
+  - >
+    Physical Intelligence raised $400M specifically to assemble the world's largest
+    robot interaction dataset. Toyota Research Institute is collecting haptic
+    demonstration data at scale. Is data collection the correct answer to the
+    bottleneck, or does it paper over a more fundamental model architecture problem?
+  - >
+    Fei-Fei Li argues we need Large World Models — physics-consistent 3D generative
+    models — before robots can truly generalize. Is spatial intelligence a prerequisite,
+    or will vision-language-action models trained on real robot data get there first?

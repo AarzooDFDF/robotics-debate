@@ -1,0 +1,15 @@
+topic: "Short, punchy debate title — the core tension"
+opening_question: >
+  The exact question the moderator poses to open the debate.
+  Should be specific enough to force participants to take a position,
+  not a generic "what do you think about X?"
+follow_up_prompts:
+  - >
+    A sharper follow-up that forces participants to commit to a number,
+    a timeline, or a concrete counterargument.
+  - >
+    A second follow-up targeting the biggest unresolved tension from Round 1.
+context: >
+  Optional: paste in the research brief summary here so experts can ground
+  their arguments in current data. This is injected into the moderator's
+  opening and each expert's first response.

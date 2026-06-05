@@ -1,0 +1,10 @@
+title: 'The Age of Embodied Intelligence: Morphology-Agnostic Robotics (Lux Capital)'
+key_insights: Humanoid form factor is not optimal for most industrial tasks — bipedal locomotion is 15-300x less energy-efficient than wheels, and five-fingered hands introduce unnecessary complexity. Boston Dynamics generates revenue from wheeled (Stretch) and quadrupedal (Spot, 1,500+ deployments) platforms, while Atlas remains undeployed commercially despite viral demos. Physical Intelligence's cross-embodiment VLA models (π0, π0.5) show morphology-agnostic learning outperforms single-platform training. 'In the hierarchy of robotic utility, manipulation matters more than mobility.' Emerging stack: data collection (teleoperation) → robot software (planning, control) → training infrastructure (foundation models, sim). 'Only edge cases teach' — 90% of training data is noise; wide deployment across diverse contexts generates the useful 10%. Intelligence is becoming cheap but embodiment is not — winners will specialize in stack layers rather than attempting full integration.
+tags:
+- Foundation Models
+- Hardware
+- Software
+- Labor
+url: https://www.luxcapital.com/news/the-age-of-embodied-intelligence-why-the-future-of-robotics-is-morphology-agnostic
+date_added: '2026-05-21'
+attribution: Independent Research

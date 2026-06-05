@@ -1,0 +1,10 @@
+title: 'All Roads Lead to Robotics (Eric Jang / 1X Technologies)'
+key_insights: All AI software will converge to looking like robotics software — as AI systems interact with physical reality they face identical engineering challenges (data management, confidence/calibration, simulation fidelity, self-improvement loops). Defines a robot as "a read/write API to physical reality" and "a source of training tokens about The Self." Three distribution strategies — software-only almighty brain, vertical integration in narrow domains, and general-purpose hardware/software (pursued by 1X, Figure, Tesla). Critical point on foundation models — base models must use full generative objectives (autoregressive or diffusion), not conditional density modeling, because conditional models won't generalize to future tasks. Skeptical of GPU-intensive startups that can't turn compute spend into margin; predicts most successful robotics startups will leverage open-source weights with lowest compute costs. General-purpose robotics will accelerate unexpectedly fast, similar to ChatGPT's apparent overnight emergence. The hardware is already ready — success requires borrowing robotics' engineering rigor, data infrastructure, and world-modeling approaches.
+tags:
+- Foundation Models
+- Software
+- Hardware
+- Labor
+url: https://evjang.com/2024/03/03/all-roads-robots.html
+date_added: '2026-05-21'
+attribution: Independent Research

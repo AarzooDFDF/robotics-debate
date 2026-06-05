@@ -1,0 +1,20 @@
+topic: "Humanoid vs. Specialized Form Factors"
+description: >
+  Should the industry bet on general-purpose humanoid robots, or task-specific
+  machines optimized for particular environments? This is the central form-factor
+  debate in robotics right now, with billions of dollars riding on the answer.
+opening_question: >
+  The humanoid robot is having its moment — Figure, 1X, Apptronik, and a dozen
+  others have raised billions on the premise that a bipedal, dextrous robot is
+  the right general-purpose platform. Is the humanoid form factor the right bet,
+  or will task-specific non-humanoid machines win commercially first?
+follow_up_prompts:
+  - >
+    Let's get specific on economics: what does a humanoid robot need to cost
+    and what tasks does it need to reliably perform for the unit economics to
+    work in the first deployment environment — whether that's a warehouse,
+    a factory floor, or a home?
+  - >
+    China's Unitree is selling humanoids at a fraction of Western competitors'
+    prices, and XPENG is starting mass production in 2026. Does Chinese
+    manufacturing scale change your answer on form factor and timeline?
